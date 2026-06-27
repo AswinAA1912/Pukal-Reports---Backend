@@ -76,7 +76,7 @@ const DebitorsCreditors = () => {
         }
     };
 
-    const getDebtorsCreditorsAll = async (req, res) => {
+    const  getDebtorsCreditorsAll = async (req, res) => {
         try {
             const { fromDate, toDate } = req.query;
 

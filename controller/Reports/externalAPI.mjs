@@ -63,8 +63,8 @@ export const unitEconomicsReport = async (req, res) => {
         }
 
         dataFound(res, {
-            rows,                                
-            lastStockValueDate: meta?.[0] ?? null 
+            rows,
+            lastStockValueDate: meta?.[0] ?? null
         });
 
     } catch (error) {
@@ -93,8 +93,8 @@ export const onlineSalesReportLOL = async (req, res) => {
     }
 }
 
-export const onlineSalesReportItemLOL = async (req,res) => {
-     try {
+export const onlineSalesReportItemLOL = async (req, res) => {
+    try {
         const { Fromdate, Todate } = req.query;
 
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
@@ -116,7 +116,7 @@ export const onlineSalesReportItemLOL = async (req,res) => {
 
 
 export const SalesGraphCard = async (req, res) => {
-   try {
+    try {
         const { Fromdate, Todate } = req.query;
 
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
@@ -134,7 +134,7 @@ export const SalesGraphCard = async (req, res) => {
         }
 
         dataFound(res, {
-            DayWise,                                
+            DayWise,
             WeekWiseData,
             DayWiseTonnage,
             WeekWiseTonnage
@@ -189,7 +189,7 @@ export const onlinePurchaseReportItem = async (req, res) => {
 };
 
 export const PurchaseGraphCard = async (req, res) => {
-   try {
+    try {
         const { Fromdate, Todate } = req.query;
 
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
@@ -207,7 +207,7 @@ export const PurchaseGraphCard = async (req, res) => {
         }
 
         dataFound(res, {
-            DayWise,                                
+            DayWise,
             WeekWiseData,
             DayWiseTonnage,
             WeekWiseTonnage
@@ -416,3 +416,227 @@ export const costcenterList = async (req, res) => {
         return servError(error, res);
     }
 };
+
+export const OnlinePaymentReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Online_Payment_VW @Fromdate, @Todate`);
+
+        const [Summary, IndirectExpense, DirectExpense] = result.recordsets || [];
+
+        if (!Summary || Summary.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            Summary,
+            IndirectExpense,
+            DirectExpense
+        });
+
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const costingReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Online_Payment_Costing_VW @Fromdate, @Todate`);
+
+        const [ItemSummary, Accountgroup] = result.recordsets || [];
+
+        if (!ItemSummary || ItemSummary.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            ItemSummary,
+            Accountgroup
+        });
+
+    } catch (error) {
+        servError(error, res);
+
+    }
+
+};
+
+export const DebtorsCreditors = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Debtors_Creditors_VW @Fromdate, @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const StaffBasedCount = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Online_Created_VW @Fromdate, @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const DayAbstractReport = async (req, res) => {
+    try {
+        const { Predate, Fromdate, Todate } = req.query;
+
+        const preDate = Predate ? ISOString(Predate) : ISOString();
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Predate", preDate)
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Day_Abstract_Report @Predate, @Fromdate, @Todate`);
+
+        const [Data1, Data2, Data3, Data4, Data5, Data6, Data7, Data8] = result.recordsets || [];
+
+        if (!Data1 || Data1.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            Data1, Data2, Data3, Data4, Data5, Data6, Data7, Data8
+        });
+
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const DayStockAbstractReport = async (req, res) => {
+    try {
+        const { Predate, Fromdate, Todate } = req.query;
+
+        const preDate = Predate ? ISOString(Predate) : ISOString();
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Predate", preDate)
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Day_Stock_Abstract_Report @Predate, @Fromdate, @Todate`);
+
+        const [Data1, Data2, Data3, Data4, Data5, Data6, Data7, Data8, Data9] = result.recordsets || [];
+
+        if (!Data1 || Data1.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            Data1, Data2, Data3, Data4, Data5, Data6, Data7, Data8, Data9
+        });
+
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const CashBoxReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Cash_List_VW @Fromdate, @Todate`);
+
+        const [OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX] = result.recordsets || [];
+
+        if (!Data1 || Data1.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX
+        });
+
+    } catch (error) {
+        servError(error, res);
+    }
+}
+
+export const PendingSaleOrderReport = async (req, res) => {
+    try {
+        const { Todate } = req.query;
+
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Online_Sales_Order_Pending_LOL_VW  @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+}
+
+export const PendingSaleOrderReportItem = async (req, res) => {
+    try {
+        const { Todate } = req.query;
+
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Online_Sales_Order_Pending_Item_LOL_VW  @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+}
