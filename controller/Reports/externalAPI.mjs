@@ -522,9 +522,16 @@ export const DayAbstractReport = async (req, res) => {
     try {
         const { Predate, Fromdate, Todate } = req.query;
 
-        const preDate = Predate ? ISOString(Predate) : ISOString();
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
         const toDate = Todate ? ISOString(Todate) : ISOString();
+        let preDate;
+        if (Predate) {
+            preDate = ISOString(Predate);
+        } else {
+            const d = new Date(fromDate);
+            d.setDate(d.getDate() - 1);
+            preDate = ISOString(d);
+        }
 
         const result = await new sql.Request()
             .input("Predate", preDate)
@@ -551,9 +558,16 @@ export const DayStockAbstractReport = async (req, res) => {
     try {
         const { Predate, Fromdate, Todate } = req.query;
 
-        const preDate = Predate ? ISOString(Predate) : ISOString();
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
         const toDate = Todate ? ISOString(Todate) : ISOString();
+        let preDate;
+        if (Predate) {
+            preDate = ISOString(Predate);
+        } else {
+            const d = new Date(fromDate);
+            d.setDate(d.getDate() - 1);
+            preDate = ISOString(d);
+        }
 
         const result = await new sql.Request()
             .input("Predate", preDate)
