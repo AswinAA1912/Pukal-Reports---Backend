@@ -238,7 +238,7 @@ export const getReportList = async (req, res) => {
             FROM tbl_ERP_Report r
             LEFT JOIN tbl_ERP_ReportType rt 
                 ON r.Report_Id = rt.Report_Id
-            LEFT JOIN ERP_LIVE_DB_SMT.dbo.tbl_Users u
+            LEFT JOIN tbl_Users u
                 ON r.CreatedBy = u.UserId
             ORDER BY r.Parent_Report, r.Report_Name
         `);

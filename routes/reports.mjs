@@ -7,7 +7,9 @@ import {
     onlinePurchaseReportItem, PurchaseGraphCard, SaleOrderReport, SaleOrderReportItem, PurchaseOrderReport, PurchaseOrderItemReport,
     StockValueGraph, StockValueReport, StaffBasedReport, costcenterList, StaffBasedReportLOS,
     OnlinePaymentReport, costingReport, DebtorsCreditors, StaffBasedCount, DayAbstractReport, DayStockAbstractReport,
-    CashBoxReport, PendingSaleOrderReport, PendingSaleOrderReportItem
+    CashBoxReport, PendingSaleOrderReport, PendingSaleOrderReportItem,
+    adminunitEconomicsReport,
+    adminunitEconomicsReportsync
 } from '../controller/Reports/externalAPI.mjs';
 import {
     MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport
@@ -32,6 +34,10 @@ ReportRouter.get('/godownexpenseReport', expences.godownTransactionExpandable);
 ReportRouter.get('/externalAPI/onlineSalesReport', onlineSalesReport);
 ReportRouter.get('/externalAPI/onlineSalesReportItem', onlineSalesReportItem);
 ReportRouter.get('/externalAPI/unitEconomicsReport', unitEconomicsReport);
+ReportRouter.get('/externalAPI/adminunitEconomics', adminunitEconomicsReport);
+ReportRouter.get('/externalAPI/adminunitEconomicsSync', adminunitEconomicsReportsync);
+
+
 ReportRouter.get('/externalAPI/onlineSalesReportLOL', onlineSalesReportLOL);
 ReportRouter.get('/externalAPI/onlineSalesReportItemLOL', onlineSalesReportItemLOL);
 ReportRouter.get('/externalAPI/SalesGraph', SalesGraphCard);

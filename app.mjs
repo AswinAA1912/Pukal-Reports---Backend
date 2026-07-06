@@ -1,3 +1,5 @@
+// Trigger Nodemon reload for connection string parsing logic
+import './config/dbContext.mjs';
 import express from 'express'
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,6 +15,7 @@ import { failed } from './res.mjs';
 import { staticPaths } from './staticPaths.mjs';
 import crypto from "node:crypto";
 import { idempotencyValidator } from './middleware/reqIdValidator.mjs';
+import dbconnect from './middleware/otherDB.mjs';
 
 dotenv.config();
 
@@ -51,7 +54,7 @@ app.use(morgan('dev', { stream: logStream }));
 
 connectDB();
 
-app.use('/api', idempotencyValidator, indexRouter);
+app.use('/api', idempotencyValidator, dbconnect, indexRouter);
 
 app.use('/api', (req, res) => {
     try {

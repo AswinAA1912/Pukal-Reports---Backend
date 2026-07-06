@@ -1,5 +1,6 @@
 import sql from 'mssql';
 import { checkIsNumber, isEqualNumber } from '../helper_functions.mjs';
+import { portalPool } from '../config/dbconfig.mjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -46,18 +47,36 @@ export const getUserTypeByAuth = async (Auth) => {
     }
 
     try {
+        // 1. Resolve Global_User_ID from Portal DB using the Authorization token
+        const portalReq = new sql.Request(portalPool);
+        portalReq.input('auth', Auth);
+        const portalResult = await portalReq.query(`
+            SELECT Global_User_ID 
+            FROM [${userPortalDB}].[dbo].[tbl_Users] 
+            WHERE Autheticate_Id = @auth AND UDel_Flag = 0
+        `);
+
+        if (portalResult.recordset.length === 0) {
+            return false;
+        }
+
+        const globalUserId = portalResult.recordset[0].Global_User_ID;
+
+        // 2. Query target company database for UserTypeId (ut.Id)
         const userTypeDetails = (
             await new sql.Request()
-                .input('Auth', Auth)
+                .input('globalUserId', globalUserId)
                 .query(`
                 SELECT ut.Id
                 FROM 
                     tbl_Users AS u,
                     tbl_User_Type AS ut
                 WHERE 
-                    u.Autheticate_Id =  @Auth
+                    u.Global_User_ID = @globalUserId
                     AND
-                    u.UserTypeId = ut.Id`
+                    u.UserTypeId = ut.Id
+                    AND
+                    u.UDel_Flag = 0`
                 )).recordset;
 
         if (userTypeDetails.length > 0) {
@@ -109,16 +128,32 @@ export const getUserIdByAuth = async (Auth) => {
     }
 
     try {
+        // 1. Resolve Global_User_ID from Portal DB using the Authorization token
+        const portalReq = new sql.Request(portalPool);
+        portalReq.input('auth', Auth);
+        const portalResult = await portalReq.query(`
+            SELECT Global_User_ID 
+            FROM [${userPortalDB}].[dbo].[tbl_Users] 
+            WHERE Autheticate_Id = @auth AND UDel_Flag = 0
+        `);
+
+        if (portalResult.recordset.length === 0) {
+            return false;
+        }
+
+        const globalUserId = portalResult.recordset[0].Global_User_ID;
+
+        // 2. Query target company database for UserId
         const getUserId = (await new sql.Request()
-            .input('Auth', Auth)
+            .input('globalUserId', globalUserId)
             .query(`
             SELECT 
                 UserId
             FROM 
                 tbl_Users
             WHERE 
-                Autheticate_Id = @Auth
-        `)
+                Global_User_ID = @globalUserId AND UDel_Flag = 0
+            `)
         ).recordset;
 
         if (getUserId.length > 0) {

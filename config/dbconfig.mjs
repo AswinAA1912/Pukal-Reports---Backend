@@ -2,33 +2,33 @@ import sql from 'mssql';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export const connectDB = () => {
+export let portalPool = null;
 
-    const config = {
 
+
+export const connectDB = async () => {
+    let config = {
         server: process.env.SERVER,
-
-        instanceName: process.env.INSTANCE,
         port: Number(process.env.DB_PORT),
-        driver: "SQL Server",
         database: process.env.DATABASE,
-
         user: process.env.USER,
         password: process.env.PASSWORD,
-
-        connectionTimeout: 300000,
-        requestTimeout: 300000,
-
+        driver: "SQL Server",
+        connectionTimeout: 15000,
+        requestTimeout: 15000,
         options: {
-            // encrypt: false,
             trustServerCertificate: true,
             enableArithAbort: true,
-            // requestTimeout: 60000,
         },
-
     };
+    if (process.env.INSTANCE) {
+        config.options.instanceName = process.env.INSTANCE;
+    }
 
-    sql.connect(config)
-        .then(() => console.log("Connected Successfully ✔"))
-        .catch(err => console.log("DB Connection Error:", err));
+    try {
+        portalPool = await sql.connect(config);
+        console.log("Connected Successfully ✔");
+    } catch (err) {
+        console.log("DB Connection Error:", err);
+    }
 };

@@ -2,6 +2,7 @@ import sql from 'mssql'
 import { servError, dataFound, failed, invalidInput, success, noData } from '../../res.mjs';
 import { decryptPasswordFun, LocalDateTime } from '../../helper_functions.mjs';
 import dotenv from 'dotenv';
+import { portalPool } from '../../config/dbconfig.mjs';
 dotenv.config();
 
 const userPortalDB = process.env.USERPORTALDB;
@@ -148,8 +149,125 @@ const LoginController = () => {
 
     const getUserByAuth = async (req, res) => {
         const Auth = req.header('Authorization')
+        const Db = req.header('Db') || req.get('Db');
 
         try {
+            // Attempt direct query on target company DB using Autheticate_Id if database context is established
+            const activePool = req.db;
+            if (activePool) {
+                try {
+                    const directQuery = `
+                    SELECT
+                        u.UserTypeId,
+                        u.UserId,
+                        u.UserName,
+                        u.Password,
+                        u.BranchId,
+                        b.BranchName,
+                        u.Name,
+                        ut.UserType,
+                        u.Autheticate_Id,
+                        u.Company_Id AS Company_id,
+                        c.Company_Name,
+                        (
+                            SELECT 
+                                TOP (1)
+                                UserId,
+                                SessionId,
+                                InTime
+                            FROM
+                                tbl_User_Log
+                            WHERE
+                                UserId = u.UserId
+                            ORDER BY
+                                InTime DESC
+                                FOR JSON PATH
+                        )  AS session
+                    FROM tbl_Users AS u
+                    LEFT JOIN tbl_Branch_Master AS b ON b.BranchId = u.BranchId
+                    LEFT JOIN tbl_User_Type AS ut ON ut.Id = u.UserTypeId
+                    LEFT JOIN tbl_Company_Master AS c ON c.Company_id = u.Company_Id
+                    WHERE u.Autheticate_Id = @auth AND UDel_Flag = 0`;
+
+                    const directReq = new sql.Request(activePool);
+                    directReq.input('auth', Auth);
+                    const directResult = await directReq.query(directQuery);
+
+                    if (directResult.recordset.length > 0) {
+                        directResult.recordset[0].session = directResult.recordset[0].session ? JSON.parse(directResult.recordset[0].session) : [{
+                            UserId: directResult.recordset[0].UserId, SessionId: new Date(), InTime: new Date()
+                        }];
+                        return dataFound(res, directResult.recordset);
+                    }
+                } catch (directErr) {
+                    console.warn("Direct company DB token lookup failed, falling back to portal:", directErr.message);
+                }
+            }
+
+            // 1. Resolve Global_User_ID and UserName from Portal DB using the Authorization token
+            const portalReq = new sql.Request(portalPool);
+            portalReq.input('auth', Auth);
+            const portalResult = await portalReq.query(`
+                SELECT Global_User_ID, UserName 
+                FROM [${userPortalDB}].[dbo].[tbl_Users] 
+                WHERE Autheticate_Id = @auth AND UDel_Flag = 0
+            `);
+
+            if (portalResult.recordset.length === 0) {
+                return failed(res, 'User Not Found in Portal')
+            }
+
+            const { UserName } = portalResult.recordset[0];
+            let globalUserId = portalResult.recordset[0].Global_User_ID;
+
+            // If a target company is specified via Db header, resolve the corresponding Global_User_ID for that company
+            if (Db) {
+                const targetReq = new sql.Request(portalPool);
+                targetReq.input('username', UserName);
+                targetReq.input('companyId', Number(Db));
+                const targetResult = await targetReq.query(`
+                    SELECT Global_User_ID 
+                    FROM [${userPortalDB}].[dbo].[tbl_Users] 
+                    WHERE UserName = @username AND Company_Id = @companyId AND UDel_Flag = 0
+                `);
+                if (targetResult.recordset.length > 0) {
+                    globalUserId = targetResult.recordset[0].Global_User_ID;
+                }
+            }
+
+            // 2. Query target company database for user details or fallback to portal DB if offline
+            if (!req.db) {
+                const fallbackReq = new sql.Request(portalPool);
+                fallbackReq.input('globalUserId', globalUserId);
+                const fallbackResult = await fallbackReq.query(`
+                    SELECT 
+                        u.UserTypeId,
+                        u.Local_User_ID AS UserId,
+                        u.UserName,
+                        u.Password,
+                        u.BranchId,
+                        NULL AS BranchName,
+                        u.Name,
+                        NULL AS UserType,
+                        u.Autheticate_Id,
+                        u.Company_Id AS Company_id,
+                        c.Company_Name
+                    FROM [${userPortalDB}].[dbo].[tbl_Users] u
+                    LEFT JOIN [${userPortalDB}].[dbo].[tbl_Company] c ON c.Local_Comp_Id = u.Company_Id
+                    WHERE u.Global_User_ID = @globalUserId AND u.UDel_Flag = 0
+                `);
+
+                if (fallbackResult.recordset.length > 0) {
+                    const userInfo = fallbackResult.recordset[0];
+                    userInfo.session = [{
+                        UserId: userInfo.UserId, SessionId: new Date(), InTime: new Date()
+                    }];
+                    return dataFound(res, [userInfo], 'Fetched from Portal (Company DB offline)');
+                } else {
+                    return failed(res, 'User Not Found in Portal Fallback');
+                }
+            }
+
             const query = `
             SELECT
                 u.UserTypeId,
@@ -190,10 +308,10 @@ const LoginController = () => {
             LEFT JOIN tbl_Company_Master AS c
             ON c.Company_id = u.Company_Id
 
-            WHERE u.Autheticate_Id = @auth AND UDel_Flag= 0`;
+            WHERE u.Global_User_ID = @globalUserId AND UDel_Flag= 0`;
 
             const request = new sql.Request();
-            request.input('auth', Auth)
+            request.input('globalUserId', globalUserId);
 
             const result = await request.query(query);
 
@@ -299,76 +417,76 @@ const LoginController = () => {
 
 
     const getUserTypeAuth = async (req, res) => {
-    try {
-        const { username } = req.body;
-        
-        if (!username || !username.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: "Username is required"
-            });
-        }
+        try {
+            const { username } = req.body;
+
+            if (!username || !username.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Username is required"
+                });
+            }
 
 
-        const userQuery = `
+            const userQuery = `
             SELECT 
               *
             FROM tbl_Users 
             WHERE UserName = @username 
                 AND UDel_Flag = 0
         `;
-        
-        const userRequest = new sql.Request();
-        userRequest.input('username', sql.VarChar, username);
-        const userResult = await userRequest.query(userQuery);
-        
-          if (userResult.recordset.length > 0) {
-            const user = userResult.recordset[0];
-            
-             return res.status(200).json({
-                  
-                    step:2,
+
+            const userRequest = new sql.Request();
+            userRequest.input('username', sql.VarChar, username);
+            const userResult = await userRequest.query(userQuery);
+
+            if (userResult.recordset.length > 0) {
+                const user = userResult.recordset[0];
+
+                return res.status(200).json({
+
+                    step: 2,
                     requirePassword: true,
                     success: true,
                     message: 'User Details Found',
                 });
-           
-            
-         
+
+
+
             } else {
-                
-                  const ledgerQuery = `
+
+                const ledgerQuery = `
                   SELECT *
             FROM tbl_Ledger_LoL lol
             WHERE lol.A1 = @username  `;
-        
-        const ledgerRequest = new sql.Request();
-        ledgerRequest.input('username', username);
-        const ledgerResult = await ledgerRequest.query(ledgerQuery);
-        
-        if (ledgerResult.recordset.length > 0) {
-            const customer = ledgerResult.recordset;
-         
-             return res.status(200).json({
-                    customer,
-                    step:4,
-                    requirePassword: false,
-                    success: true,
-                    message: 'Ledger Details Found',
-                });
-           
-      }
-                
-        
-        
-       
-    }
-        
-    } catch (error) {
-        console.error("Error in getUserTypeAuth:", error);
-        return servError(error, res);
-    }
-};
+
+                const ledgerRequest = new sql.Request();
+                ledgerRequest.input('username', username);
+                const ledgerResult = await ledgerRequest.query(ledgerQuery);
+
+                if (ledgerResult.recordset.length > 0) {
+                    const customer = ledgerResult.recordset;
+
+                    return res.status(200).json({
+                        customer,
+                        step: 4,
+                        requirePassword: false,
+                        success: true,
+                        message: 'Ledger Details Found',
+                    });
+
+                }
+
+
+
+
+            }
+
+        } catch (error) {
+            console.error("Error in getUserTypeAuth:", error);
+            return servError(error, res);
+        }
+    };
 
     return {
         getAccountsInUserPortal,

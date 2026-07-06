@@ -1,5 +1,6 @@
-import sql from 'mssql'
+import sql from 'mssql';
 import { failed, servError } from '../res.mjs';
+import { portalPool } from '../config/dbconfig.mjs';
 
 const authenticateToken = async (req, res, next) => {
 
@@ -10,9 +11,9 @@ const authenticateToken = async (req, res, next) => {
             return failed(res, 'Failed to authorize');
         }
 
-        const request = new sql.Request()
+        const request = new sql.Request(portalPool)
             .input('clientToken', clientToken)
-            .query(`SELECT 1 FROM tbl_Users WHERE Autheticate_Id = @clientToken`)
+            .query(`SELECT 1 FROM tbl_Users WHERE Autheticate_Id = @clientToken`);
 
         const result = await request;
 

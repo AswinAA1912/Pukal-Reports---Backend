@@ -2,7 +2,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 
-const src = path.join(__dirname, '../ERP_Frontend/build');
+const src = path.join(__dirname, '../Pukal-Reports-Frontend/dist');
 const dest = path.join(__dirname, 'frontend');
 
 (async () => {
