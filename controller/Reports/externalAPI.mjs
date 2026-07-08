@@ -664,14 +664,14 @@ export const CashBoxReport = async (req, res) => {
             .input("Todate", toDate)
             .query(`EXEC Reporting_Cash_List_VW @Fromdate, @Todate`);
 
-        const [OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX] = result.recordsets || [];
+        const [OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX, RecPay, Jnl] = result.recordsets || [];
 
         if (!Data1 || Data1.length === 0) {
             return noData(res);
         }
 
         dataFound(res, {
-            OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX
+            OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX, RecPay, Jnl
         });
 
     } catch (error) {
@@ -716,3 +716,33 @@ export const PendingSaleOrderReportItem = async (req, res) => {
         servError(error, res);
     }
 }
+
+export const GodownInstockSummary = async (req, res) => {
+    try {
+        const { Predate, Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+        let preDate;
+        if (Predate) {
+            preDate = ISOString(Predate);
+        } else {
+            const d = new Date(fromDate);
+            d.setDate(d.getDate() - 1);
+            preDate = ISOString(d);
+        }
+
+        const result = await new sql.Request()
+            .input("Predate", preDate)
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Current_Stock_Summarry_Report @Predate, @Fromdate, @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};

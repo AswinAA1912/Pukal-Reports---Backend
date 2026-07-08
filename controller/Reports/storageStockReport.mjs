@@ -249,7 +249,7 @@ const getStorageStockGodownWiseForMobile = async (req, res) => {
 
         const mergeLosData = filteredData.map(row => {
             const {
-                Product_Rate = 0, 
+                Product_Rate = 0,
             } = productLosResult.find(
                 productDetails => isEqualNumber(
                     productDetails.Product_Id,
@@ -416,12 +416,12 @@ const StockGroupWiseClosingDetails = async (req, res) => {
 //     try {
 //         const Fromdate = req.query.Fromdate ? ISOString(req.query.Fromdate) : ISOString();
 //         const Todate = req.query.Todate ? ISOString(req.query.Todate) : ISOString();
-        
+
 //         const filter1 = req.query.filter1 ? req.query.filter1.split(',').map(f => f.trim()).filter(f => f) : [];
 //         const filter2 = req.query.filter2 ? req.query.filter2.split(',').map(f => f.trim()).filter(f => f) : [];
 //         const filter3 = req.query.filter3 ? req.query.filter3.split(',').map(f => f.trim()).filter(f => f) : [];
-      
-   
+
+
 //         const mobileFilters = await new sql.Request().query(`
 //             SELECT 
 //                 mrd.Type AS FilterType,
@@ -450,47 +450,47 @@ const StockGroupWiseClosingDetails = async (req, res) => {
 //             e.ColumnName && e.FilterLevel == 1
 //         );
 
-     
+
 //         const formatDate = (date) => {
 //             const d = new Date(date);
 //             return `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
 //         };
 
-     
+
 //         const formatFilterValues = (values) => {
 //             if (!values || values.length === 0) return '';
-            
+
 //             const formatted = values.map(v => {
- 
+
 //                 let cleaned = v.replace(/"/g, '');
-           
+
 //                 cleaned = cleaned.trim();
-             
+
 //                 cleaned = cleaned.replace(/'/g, "''");
-               
+
 //                 return `''${cleaned}''`;
 //             }).join(',');
-            
+
 //             return formatted;
 //         };
 
-      
+
 //         const escapeColumnName = (name) => {
 //             if (!name) return '';
 //             return name.replace(/'/g, "''");
 //         };
 
-     
+
 //         const filter1Column = filterDetails[0]?.ColumnName || '';
 //         const filter2Column = filterDetails[1]?.ColumnName || '';
 //         const filter3Column = filterDetails[2]?.ColumnName || '';
 
-    
+
 //         const filter1Value = formatFilterValues(filter1);
 //         const filter2Value = formatFilterValues(filter2);
 //         const filter3Value = formatFilterValues(filter3);
 
-  
+
 //         const sqlString = `exec Stock_Summarry_Mobile_Search 
 //             '${formatDate(Fromdate)}',
 //             '${formatDate(Todate)}',
@@ -516,7 +516,7 @@ const StockGroupWiseClosingDetails = async (req, res) => {
 //             )
 //         );
 
-  
+
 
 //         sentData(res, filteredData);
 //     } catch (e) {
@@ -531,26 +531,26 @@ const getStorageStockItemWiseMobile = async (req, res) => {
     try {
         const Fromdate = req.query.Fromdate ? ISOString(req.query.Fromdate) : ISOString();
         const Todate = req.query.Todate ? ISOString(req.query.Todate) : ISOString();
-        
-      
+
+
         const filter1 = req.query.filter1 ? req.query.filter1.split(',').map(f => f.trim()).filter(f => f) : [];
         const filter2 = req.query.filter2 ? req.query.filter2.split(',').map(f => f.trim()).filter(f => f) : [];
         const filter3 = req.query.filter3 ? req.query.filter3.split(',').map(f => f.trim()).filter(f => f) : [];
-      
-      
+
+
         const groupFilter1 = req.query.groupFilter1 ? req.query.groupFilter1.split(',').map(f => f.trim()).filter(f => f) : [];
         const groupFilter2 = req.query.groupFilter2 ? req.query.groupFilter2.split(',').map(f => f.trim()).filter(f => f) : [];
         const groupFilter3 = req.query.groupFilter3 ? req.query.groupFilter3.split(',').map(f => f.trim()).filter(f => f) : [];
 
-        
+
         const activeGroupFilters = {};
         if (groupFilter1.length > 0) activeGroupFilters[1] = groupFilter1;
         if (groupFilter2.length > 0) activeGroupFilters[2] = groupFilter2;
         if (groupFilter3.length > 0) activeGroupFilters[3] = groupFilter3;
 
-     
 
-        
+
+
         const mobileFilters = await new sql.Request().query(`
          
             SELECT 
@@ -587,19 +587,19 @@ const getStorageStockItemWiseMobile = async (req, res) => {
             ORDER BY SortOrder  -- Use the calculated SortOrder column
         `);
 
-       
-        const regularFilters = mobileFilters.recordset.filter(e => 
+
+        const regularFilters = mobileFilters.recordset.filter(e =>
             e.ColumnName && e.FilterCategory === 'Regular'
         );
-        
-        const groupFilters = mobileFilters.recordset.filter(e => 
+
+        const groupFilters = mobileFilters.recordset.filter(e =>
             e.ColumnName && e.FilterCategory === 'Group' && e.Level_Id
         );
 
         // Sort group filters by Level_Id (1,2,3)
         groupFilters.sort((a, b) => a.Level_Id - b.Level_Id);
 
-      
+
 
         const formatDate = (date) => {
             const d = new Date(date);
@@ -608,14 +608,14 @@ const getStorageStockItemWiseMobile = async (req, res) => {
 
         const formatFilterValues = (values) => {
             if (!values || values.length === 0) return '';
-            
+
             const formatted = values.map(v => {
                 let cleaned = v.replace(/"/g, '');
                 cleaned = cleaned.trim();
                 cleaned = cleaned.replace(/'/g, "''");
                 return `''${cleaned}''`;
             }).join(',');
-            
+
             return formatted;
         };
 
@@ -626,7 +626,7 @@ const getStorageStockItemWiseMobile = async (req, res) => {
 
         // Sort regular filters by FilterType
         regularFilters.sort((a, b) => a.FilterType - b.FilterType);
-        
+
         // Get regular filter columns
         const filter1Column = regularFilters[0]?.ColumnName || '';
         const filter2Column = regularFilters[1]?.ColumnName || '';
@@ -640,7 +640,7 @@ const getStorageStockItemWiseMobile = async (req, res) => {
             }
         });
 
-    
+
 
         // Format regular filter values
         const filter1Value = formatFilterValues(filter1);
@@ -658,43 +658,43 @@ const getStorageStockItemWiseMobile = async (req, res) => {
             '${escapeColumnName(filter3Column)}',
             '${filter3Value}'`;
 
-       
+
 
         const result = await new sql.Request().query(sqlString);
-        
+
         // Start with all results from stored procedure
         let filteredData = result.recordset;
-        
-   
+
+
         // ============ DYNAMICALLY APPLY ACTIVE GROUP FILTERS ============
-        
+
         // Apply group filters based on Level_Id (1,2,3)
         const activeLevels = Object.keys(activeGroupFilters).map(Number).sort();
-        
+
         if (activeLevels.length > 0) {
 
-            
+
             for (const levelId of activeLevels) {
                 const filterValues = activeGroupFilters[levelId];
                 const columnName = groupFilterColumns[levelId];
-                
+
                 if (filterValues && filterValues.length > 0 && columnName) {
                     const beforeCount = filteredData.length;
-                    
+
                     filteredData = filteredData.filter(row => {
                         const value = row[columnName];
                         if (value === undefined || value === null) return false;
-                       
+
                         const stringValue = String(value).trim();
                         return filterValues.some(fv => String(fv).trim() === stringValue);
                     });
-                    
-                  
-                } 
-            }
-        } 
 
-       
+
+                }
+            }
+        }
+
+
         const beforeZeroFilter = filteredData.length;
         filteredData = filteredData.filter(
             row => !(
@@ -708,10 +708,10 @@ const getStorageStockItemWiseMobile = async (req, res) => {
                 isEqualNumber(row?.Bal_Qty, 0)
             )
         );
-   
+
 
         sentData(res, filteredData);
-        
+
     } catch (e) {
         console.error('API Error:', e);
         servError(e, res);
@@ -859,127 +859,17 @@ const getStorageStockGodownWiseMobile = async (req, res) => {
     }
 };
 
-// const getStorageStockGodownWiseMobile = async (req, res) => {
-//     try {
-//         const Fromdate = req.query.Fromdate ? ISOString(req.query.Fromdate) : ISOString();
-//         const Todate = req.query.Todate ? ISOString(req.query.Todate) : ISOString();
-        
-//         const filter1 = req.query.filter1 ? req.query.filter1.split(',').map(f => f.trim()).filter(f => f) : [];
-//         const filter2 = req.query.filter2 ? req.
-        
-//         query.filter2.split(',').map(f => f.trim()).filter(f => f) : [];
-//         const filter3 = req.query.filter3 ? req.query.filter3.split(',').map(f => f.trim()).filter(f => f) : [];
-//         const Godown_Id = req.query.godown_Id || 0; 
-   
-//         const mobileFilters = await new sql.Request().query(`
-//             SELECT 
-//                 mrd.Type AS FilterType,
-//                 mrd.Column_Name AS ColumnName,
-//                 mrd.Table_Id AS TableId,
-//                 tm.Table_Name AS TableName,
-//                 mrd.FilterLevel,
-//                 STUFF((
-//                     SELECT DISTINCT ',' + CAST(mrd2.List_Type AS VARCHAR(10))
-//                     FROM tbl_Mobile_Report_Details mrd2
-//                     WHERE mrd2.Type = mrd.Type 
-//                     AND mrd2.Table_Id = mrd.Table_Id 
-//                     AND mrd2.Column_Name = mrd.Column_Name
-//                     AND mrd2.Mob_Rpt_Id = mrd.Mob_Rpt_Id
-//                     FOR XML PATH('')
-//                 ), 1, 1, '') AS ListTypes
-//             FROM tbl_Mobile_Report_Details mrd 
-//             INNER JOIN tbl_Mobile_Report_Type mrt ON mrt.Mob_Rpt_Id = mrd.Mob_Rpt_Id
-//             LEFT JOIN tbl_Table_Master tm ON tm.Table_Id = mrd.Table_Id
-//             WHERE mrt.Report_Name = 'StockInhand-Godown'
-//             GROUP BY mrd.Type, mrd.Table_Id, mrd.Column_Name, mrd.Mob_Rpt_Id, tm.Table_Name, mrd.FilterLevel
-//             ORDER BY mrd.Type
-//         `);
-
-//         const filterDetails = mobileFilters.recordset.filter(e => 
-//             e.ColumnName && e.FilterLevel == 1
-//         );
-     
-//         const formatDate = (date) => {
-//             const d = new Date(date);
-//             return `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
-//         };
-
- 
-//         const formatFilterValues = (values) => {
-//             if (!values || values.length === 0) return '';
-            
-//             const formatted = values.map(v => {
-//                 let cleaned = v.replace(/"/g, '');
-//                 cleaned = cleaned.trim();
-//                 cleaned = cleaned.replace(/'/g, "''");
-//                 return `''${cleaned}''`;
-//             }).join(',');
-            
-//             return formatted;
-//         };
-
-//         const escapeColumnName = (name) => {
-//             if (!name) return '';
-//             return name.replace(/'/g, "''");
-//         };
-
-//         const filter1Column = filterDetails[0]?.ColumnName || '';
-//         const filter2Column = filterDetails[1]?.ColumnName || '';
-//         const filter3Column = filterDetails[2]?.ColumnName || '';
-
-     
-//         const filter1Value = filter1.length > 0 ? formatFilterValues(filter1) : '';
-//         const filter2Value = filter2.length > 0 ? formatFilterValues(filter2) : '';
-//         const filter3Value = filter3.length > 0 ? formatFilterValues(filter3) : '';
-
-    
-//         const sqlString = `exec Stock_Summarry_Search_Godown_Mobile_Search
-//             '${formatDate(Fromdate)}',
-//             '${formatDate(Todate)}',
-//             '${Godown_Id}',
-//             '${escapeColumnName(filter1Column)}',
-//             '${filter1Value}',
-//             '${escapeColumnName(filter2Column)}',
-//             '${filter2Value}',
-//             '${escapeColumnName(filter3Column)}',
-//             '${filter3Value}'`;
-
-      
-        
-//         const result = await new sql.Request().query(sqlString);
-
-//         const filteredData = result.recordset.filter(
-//             row => !(
-//                 isEqualNumber(row?.OB_Act_Qty, 0) &&
-//                 isEqualNumber(row?.Pur_Act_Qty, 0) &&
-//                 isEqualNumber(row?.Sal_Act_Qty, 0) &&
-//                 isEqualNumber(row?.OB_Bal_Qty, 0) &&
-//                 isEqualNumber(row?.Pur_Qty, 0) &&
-//                 isEqualNumber(row?.Sal_Qty, 0) &&
-//                 isEqualNumber(row?.Bal_Qty, 0) &&
-//                 isEqualNumber(row?.Act_Bal_Qty, 0)
-//             )
-//         );
-
-//         sentData(res, filteredData);
-//     } catch (e) {
-//         console.error('API Error:', e);
-//         servError(e, res);
-//     }
-// }
-
-
 const itemGroupWiseClosingDetailsMobile = async (req, res) => {
     try {
         const reqDate = req.query?.reqDate ? ISOString(req.query?.reqDate) : ISOString();
         const getMaxOfItemClosingDate = isEqualNumber(req?.query?.getMaxOfItemClosingDate, 1);
-        
-        
+
+
         const filter1 = req.query.filter1 ? req.query.filter1.split(',').map(f => f.trim()).filter(f => f) : [];
         const filter2 = req.query.filter2 ? req.query.filter2.split(',').map(f => f.trim()).filter(f => f) : [];
         const filter3 = req.query.filter3 ? req.query.filter3.split(',').map(f => f.trim()).filter(f => f) : [];
-        
- 
+
+
         const mobileFilters = await new sql.Request().query(`
             SELECT 
                 mrd.Type AS FilterType,
@@ -989,38 +879,38 @@ const itemGroupWiseClosingDetailsMobile = async (req, res) => {
             WHERE mrt.Report_Name = 'StockInhand'
             ORDER BY mrd.Type
         `);
-        
-       
+
+
         let whereConditions = [];
         const request = new sql.Request().input('reqDate', sql.DateTime, reqDate);
-        
-      
+
+
         if (filter1.length > 0 && mobileFilters.recordset.length >= 1) {
             const columnName = mobileFilters.recordset[0].ColumnName;
             const paramName = `filter1_${Date.now()}`;
             whereConditions.push(`los.${columnName} IN (@${paramName})`);
             request.input(paramName, sql.NVarChar, filter1.join(','));
         }
-        
+
         if (filter2.length > 0 && mobileFilters.recordset.length >= 2) {
             const columnName = mobileFilters.recordset[1].ColumnName;
             const paramName = `filter2_${Date.now()}`;
             whereConditions.push(`los.${columnName} IN (@${paramName})`);
             request.input(paramName, sql.NVarChar, filter2.join(','));
         }
-        
+
         if (filter3.length > 0 && mobileFilters.recordset.length >= 3) {
             const columnName = mobileFilters.recordset[2].ColumnName;
             const paramName = `filter3_${Date.now()}`;
             whereConditions.push(`los.${columnName} IN (@${paramName})`);
             request.input(paramName, sql.NVarChar, filter3.join(','));
         }
-        
+
         let whereClause = '';
         if (whereConditions.length > 0) {
             whereClause = `WHERE ${whereConditions.join(' AND ')}`;
         }
-        
+
         const query = `
             SELECT
                 latest.*,
@@ -1057,7 +947,7 @@ const itemGroupWiseClosingDetailsMobile = async (req, res) => {
             ON los.Item_Group_Id = ig.Item_Group_Id`;
 
         let result = await request.query(query);
-        
+
         sentData(res, result.recordset);
 
     } catch (e) {
@@ -1071,12 +961,12 @@ const getStorageStockValueItemWise = async (req, res) => {
     try {
         const Fromdate = req.query.Fromdate ? ISOString(req.query.Fromdate) : ISOString();
         const Todate = req.query.Todate ? ISOString(req.query.Todate) : ISOString();
-        
-      
+
+
         const filter1 = req.query.filter1 ? req.query.filter1.split(',').map(f => f.trim()).filter(f => f) : [];
         const filter2 = req.query.filter2 ? req.query.filter2.split(',').map(f => f.trim()).filter(f => f) : [];
         const filter3 = req.query.filter3 ? req.query.filter3.split(',').map(f => f.trim()).filter(f => f) : [];
-      
+
         const groupFilter1 = req.query.groupFilter1 ? req.query.groupFilter1.split(',').map(f => f.trim()).filter(f => f) : [];
         const groupFilter2 = req.query.groupFilter2 ? req.query.groupFilter2.split(',').map(f => f.trim()).filter(f => f) : [];
         const groupFilter3 = req.query.groupFilter3 ? req.query.groupFilter3.split(',').map(f => f.trim()).filter(f => f) : [];
@@ -1122,12 +1012,12 @@ const getStorageStockValueItemWise = async (req, res) => {
             ORDER BY SortOrder  -- Use the calculated SortOrder column
         `);
 
-       
-        const regularFilters = mobileFilters.recordset.filter(e => 
+
+        const regularFilters = mobileFilters.recordset.filter(e =>
             e.ColumnName && e.FilterCategory === 'Regular'
         );
-        
-        const groupFilters = mobileFilters.recordset.filter(e => 
+
+        const groupFilters = mobileFilters.recordset.filter(e =>
             e.ColumnName && e.FilterCategory === 'Group' && e.Level_Id
         );
 
@@ -1141,14 +1031,14 @@ const getStorageStockValueItemWise = async (req, res) => {
 
         const formatFilterValues = (values) => {
             if (!values || values.length === 0) return '';
-            
+
             const formatted = values.map(v => {
                 let cleaned = v.replace(/"/g, '');
                 cleaned = cleaned.trim();
                 cleaned = cleaned.replace(/'/g, "''");
                 return `''${cleaned}''`;
             }).join(',');
-            
+
             return formatted;
         };
 
@@ -1159,7 +1049,7 @@ const getStorageStockValueItemWise = async (req, res) => {
 
         // Sort regular filters by FilterType
         regularFilters.sort((a, b) => a.FilterType - b.FilterType);
-        
+
         // Get regular filter columns
         const filter1Column = regularFilters[0]?.ColumnName || '';
         const filter2Column = regularFilters[1]?.ColumnName || '';
@@ -1190,37 +1080,37 @@ const getStorageStockValueItemWise = async (req, res) => {
             '${filter3Value}'`;
 
         const result = await new sql.Request().query(sqlString);
-        
+
         // Start with all results from stored procedure
         let filteredData = result.recordset;
-        
+
         // ============ DYNAMICALLY APPLY ACTIVE GROUP FILTERS ============
-        
+
         // Apply group filters based on Level_Id (1,2,3)
         const activeLevels = Object.keys(activeGroupFilters).map(Number).sort();
-        
+
         if (activeLevels.length > 0) {
 
             for (const levelId of activeLevels) {
                 const filterValues = activeGroupFilters[levelId];
                 const columnName = groupFilterColumns[levelId];
-                
+
                 if (filterValues && filterValues.length > 0 && columnName) {
                     const beforeCount = filteredData.length;
-                    
+
                     filteredData = filteredData.filter(row => {
                         const value = row[columnName];
                         if (value === undefined || value === null) return false;
-                       
+
                         const stringValue = String(value).trim();
                         return filterValues.some(fv => String(fv).trim() === stringValue);
                     });
-                    
-                } 
-            }
-        } 
 
-       
+                }
+            }
+        }
+
+
         const beforeZeroFilter = filteredData.length;
         filteredData = filteredData.filter(
             row => !(
@@ -1234,9 +1124,9 @@ const getStorageStockValueItemWise = async (req, res) => {
                 isEqualNumber(row?.Bal_Qty, 0)
             )
         );
-   
+
         sentData(res, filteredData);
-        
+
     } catch (e) {
         console.error('API Error:', e);
         servError(e, res);
@@ -1429,6 +1319,144 @@ const getStorageStockValueGodownWise = async (req, res) => {
     }
 };
 
+const getStorageStockGodownitemWise = async (req, res) => {
+    try {
+        const Fromdate = req.query.Fromdate ? ISOString(req.query.Fromdate) : ISOString();
+        const Todate = req.query.Todate ? ISOString(req.query.Todate) : ISOString();
+
+        const filter1 = req.query.filter1?.split(',').map(f => f.trim()).filter(Boolean) || [];
+        const filter2 = req.query.filter2?.split(',').map(f => f.trim()).filter(Boolean) || [];
+        const filter3 = req.query.filter3?.split(',').map(f => f.trim()).filter(Boolean) || [];
+
+        const groupFilter1 = req.query.groupFilter1?.split(',').map(f => f.trim()).filter(Boolean) || [];
+        const groupFilter2 = req.query.groupFilter2?.split(',').map(f => f.trim()).filter(Boolean) || [];
+        const groupFilter3 = req.query.groupFilter3?.split(',').map(f => f.trim()).filter(Boolean) || [];
+
+        const Godown_Id = toNumber(req.query.Godown_Id || req.query.godown_Id || 0);
+
+        const formatDate = (date) => {
+            const d = new Date(date);
+            return `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
+        };
+
+        const formatFilterValues = (values) => {
+            if (!values.length) return '';
+            return values.map(v => `''${v.replace(/'/g, "''")}''`).join(',');
+        };
+
+        const escapeColumnName = (name) => name ? name.replace(/'/g, "''") : '';
+
+        // 🔥 CACHE FILTER METADATA
+        if (!cachedFilters) {
+            const mobileFilters = await new sql.Request().query(`
+                SELECT 
+                    mrd.Type AS FilterType,
+                    mrd.Column_Name AS ColumnName,
+                    mrd.FilterLevel,
+                    'Regular' AS FilterCategory,
+                    NULL AS Level_Id
+                FROM tbl_Mobile_Report_Details mrd 
+                INNER JOIN tbl_Mobile_Report_Type mrt 
+                    ON mrt.Mob_Rpt_Id = mrd.Mob_Rpt_Id
+                WHERE mrt.Report_Name = 'StockInhand-Godown'
+
+                UNION ALL
+
+                SELECT 
+                    7 AS FilterType,
+                    gt.Column_Name,
+                    3 AS FilterLevel,
+                    'Group',
+                    gt.Level_Id
+                FROM tbl_Group_Template gt
+                INNER JOIN tbl_Mobile_Report_Type mrt 
+                    ON mrt.Mob_Rpt_Id = gt.Mob_Rpt_Id
+                WHERE mrt.Report_Name = 'StockInhand-Godown'
+            `);
+
+            const regularFilters = mobileFilters.recordset.filter(e => e.FilterCategory === 'Regular');
+            const groupFilters = mobileFilters.recordset.filter(e => e.FilterCategory === 'Group');
+
+            regularFilters.sort((a, b) => a.FilterType - b.FilterType);
+            groupFilters.sort((a, b) => a.Level_Id - b.Level_Id);
+
+            const level1Filters = regularFilters.filter(f => f.FilterLevel == 1);
+
+            cachedFilters = {
+                filter1Column: level1Filters[0]?.ColumnName || '',
+                filter2Column: level1Filters[1]?.ColumnName || '',
+                filter3Column: level1Filters[2]?.ColumnName || '',
+                groupFilterColumns: groupFilters.reduce((acc, gf) => {
+                    acc[gf.Level_Id] = gf.ColumnName;
+                    return acc;
+                }, {})
+            };
+        }
+
+        const { filter1Column, filter2Column, filter3Column, groupFilterColumns } = cachedFilters;
+
+        // ✅ FORMAT VALUES
+        const filter1Value = formatFilterValues(filter1);
+        const filter2Value = formatFilterValues(filter2);
+        const filter3Value = formatFilterValues(filter3);
+
+        // ✅ CALL SP
+        const request = new sql.Request();
+
+        request.input('Fromdate', sql.VarChar(50), formatDate(Fromdate));
+        request.input('Todate', sql.VarChar(50), formatDate(Todate));
+        request.input('Godown_Id', sql.Int, Godown_Id);
+
+        request.input('Filter_1', sql.VarChar(50), escapeColumnName(filter1Column));
+        request.input('Filter_1_Value', sql.NVarChar('max'), filter1Value);
+
+        request.input('Filter_2', sql.VarChar(50), escapeColumnName(filter2Column));
+        request.input('Filter_2_Value', sql.NVarChar('max'), filter2Value);
+
+        request.input('Filter_3', sql.VarChar(50), escapeColumnName(filter3Column));
+        request.input('Filter_3_Value', sql.NVarChar('max'), filter3Value);
+
+        const result = await request.execute('Stock_Summarry_Godown_IN_OUT_Process');
+
+        const g1 = new Set(groupFilter1);
+        const g2 = new Set(groupFilter2);
+        const g3 = new Set(groupFilter3);
+
+        const col1 = groupFilterColumns[1];
+        const col2 = groupFilterColumns[2];
+        const col3 = groupFilterColumns[3];
+
+        // 🔥 SINGLE PASS FILTER (FAST)
+        const filteredData = result.recordset.filter(row => {
+
+            // Group filters
+            if (g1.size && (!row[col1] || !g1.has(String(row[col1]).trim()))) return false;
+            if (g2.size && (!row[col2] || !g2.has(String(row[col2]).trim()))) return false;
+            if (g3.size && (!row[col3] || !g3.has(String(row[col3]).trim()))) return false;
+
+            // Zero filter
+            if (
+                (row.OB_Act_Qty || 0) === 0 &&
+                (row.Pur_Act_Qty || 0) === 0 &&
+                (row.Sal_Act_Qty || 0) === 0 &&
+                (row.OB_Bal_Qty || 0) === 0 &&
+                (row.Pur_Qty || 0) === 0 &&
+                (row.Sal_Qty || 0) === 0 &&
+                (row.Bal_Qty || 0) === 0 &&
+                (row.Bal_Act_Qty || 0) === 0
+            ) return false;
+
+            return true;
+        });
+
+        sentData(res, filteredData);
+
+    } catch (e) {
+        console.error('API Error:', e);
+        servError(e, res);
+    }
+};
+
 export default {
     getStorageStockItemWise,
     getStorageStockGodownWise,
@@ -1436,10 +1464,11 @@ export default {
     itemGroupWiseClosingDetails,
     StockGroupWiseClosingDetails,
     getStorageStockItemWiseMobile,
-    getStorageStockGodownWiseMobile,    
+    getStorageStockGodownWiseMobile,
     itemGroupWiseClosingDetailsMobile,
     getStorageStockValueItemWise,
     getStorageStockValueGodownWise,
+    getStorageStockGodownitemWise
     // getStockMobileReportDropdowns
 }
 

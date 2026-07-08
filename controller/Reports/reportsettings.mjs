@@ -386,13 +386,25 @@ export const updateReportSettings = async (req, res) => {
     const transaction = new sql.Transaction();
 
     try {
-        const { reportId, typeId, columns } = req.body;
+        const { reportId, typeId, columns, reportName } = req.body;
 
         if (!reportId || !typeId) {
             return res.status(400).json({ message: "Invalid payload" });
         }
 
         await transaction.begin();
+
+        /* 🔥 UPDATE REPORT NAME IF PROVIDED */
+        if (reportName) {
+            await new sql.Request(transaction)
+                .input("Report_Id", sql.Int, reportId)
+                .input("Report_Name", sql.VarChar, reportName)
+                .query(`
+                    UPDATE tbl_ERP_Report
+                    SET Report_Name = @Report_Name
+                    WHERE Report_Id = @Report_Id
+                `);
+        }
 
         /* 🔥 DELETE OLD */
         await new sql.Request(transaction)

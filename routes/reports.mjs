@@ -9,7 +9,8 @@ import {
     OnlinePaymentReport, costingReport, DebtorsCreditors, StaffBasedCount, DayAbstractReport, DayStockAbstractReport,
     CashBoxReport, PendingSaleOrderReport, PendingSaleOrderReportItem,
     adminunitEconomicsReport,
-    adminunitEconomicsReportsync
+    adminunitEconomicsReportsync,
+    GodownInstockSummary
 } from '../controller/Reports/externalAPI.mjs';
 import {
     MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport
@@ -25,7 +26,7 @@ ReportRouter.get('/salesReport/ledger/itemDetails', stockAndPurchase.salesItemDe
 // storage stock mobile reports
 ReportRouter.get('/storageStock/itemWiseMobile', storageStockReport.getStorageStockItemWiseMobile);
 ReportRouter.get('/storageStock/godownWiseMobile', storageStockReport.getStorageStockGodownWiseMobile);
-
+ReportRouter.get('/storageStock/godownitemWise', storageStockReport.getStorageStockGodownitemWise);
 // expenses reports
 ReportRouter.get('/itemexpenseReport', expences.itemsTransactionExpandable);
 ReportRouter.get('/godownexpenseReport', expences.godownTransactionExpandable);
@@ -62,6 +63,7 @@ ReportRouter.get('/externalAPI/dayStockAbstract', DayStockAbstractReport);
 ReportRouter.get('/externalAPI/cashbox', CashBoxReport);
 ReportRouter.get('/externalAPI/pendingSaleOrder', PendingSaleOrderReport);
 ReportRouter.get('/externalAPI/pendingSaleOrderItem', PendingSaleOrderReportItem);
+ReportRouter.get('/externalAPI/godownSummaryInstock', GodownInstockSummary);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
