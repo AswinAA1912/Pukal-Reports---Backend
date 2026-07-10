@@ -746,3 +746,22 @@ export const GodownInstockSummary = async (req, res) => {
         servError(error, res);
     }
 };
+
+export const StockInOutProcess = async (req, res) => {
+    try {
+        const { Todate } = req.query;
+
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Todate", toDate)
+            .query(`EXEC SP_Godown_Stock_Movement_Report  @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+}

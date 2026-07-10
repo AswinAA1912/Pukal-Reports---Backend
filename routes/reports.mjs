@@ -10,7 +10,8 @@ import {
     CashBoxReport, PendingSaleOrderReport, PendingSaleOrderReportItem,
     adminunitEconomicsReport,
     adminunitEconomicsReportsync,
-    GodownInstockSummary
+    GodownInstockSummary,
+    StockInOutProcess
 } from '../controller/Reports/externalAPI.mjs';
 import {
     MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport
@@ -64,6 +65,7 @@ ReportRouter.get('/externalAPI/cashbox', CashBoxReport);
 ReportRouter.get('/externalAPI/pendingSaleOrder', PendingSaleOrderReport);
 ReportRouter.get('/externalAPI/pendingSaleOrderItem', PendingSaleOrderReportItem);
 ReportRouter.get('/externalAPI/godownSummaryInstock', GodownInstockSummary);
+ReportRouter.get('/externalAPI/stockinoutprocess', StockInOutProcess);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
