@@ -664,14 +664,14 @@ export const CashBoxReport = async (req, res) => {
             .input("Todate", toDate)
             .query(`EXEC Reporting_Cash_List_VW @Fromdate, @Todate`);
 
-        const [OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX, RecPay, Jnl] = result.recordsets || [];
+        const [OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX, RecPay, Jnl, Cls] = result.recordsets || [];
 
         if (!Data1 || Data1.length === 0) {
             return noData(res);
         }
 
         dataFound(res, {
-            OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX, RecPay, Jnl
+            OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX, RecPay, Jnl, Cls
         });
 
     } catch (error) {
@@ -761,6 +761,33 @@ export const StockInOutProcess = async (req, res) => {
         if (!recordset.length) return noData(res);
 
         dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+}
+
+export const BankBoxReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Bank_List_VW @Fromdate, @Todate`);
+
+        const [OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX, RecPay, Jnl] = result.recordsets || [];
+
+        if (!Data1 || Data1.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            OB, Data1, Cash, Bank, LedgerGrp, DEX, IDEX, RecPay, Jnl
+        });
+
     } catch (error) {
         servError(error, res);
     }

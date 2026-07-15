@@ -11,8 +11,10 @@ import {
     adminunitEconomicsReport,
     adminunitEconomicsReportsync,
     GodownInstockSummary,
-    StockInOutProcess
+    StockInOutProcess,
+    BankBoxReport
 } from '../controller/Reports/externalAPI.mjs';
+import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
     MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport
 } from '../controller/Reports/reportsettings.mjs';
@@ -62,10 +64,15 @@ ReportRouter.get('/externalAPI/staffbased', StaffBasedReportLOS);
 ReportRouter.get('/externalAPI/dayAbstract', DayAbstractReport);
 ReportRouter.get('/externalAPI/dayStockAbstract', DayStockAbstractReport);
 ReportRouter.get('/externalAPI/cashbox', CashBoxReport);
+ReportRouter.get('/externalAPI/Bankbox', BankBoxReport);
 ReportRouter.get('/externalAPI/pendingSaleOrder', PendingSaleOrderReport);
 ReportRouter.get('/externalAPI/pendingSaleOrderItem', PendingSaleOrderReportItem);
 ReportRouter.get('/externalAPI/godownSummaryInstock', GodownInstockSummary);
 ReportRouter.get('/externalAPI/stockinoutprocess', StockInOutProcess);
+ReportRouter.get('/receipt/chequeTransaction', receiptReport.getChequeTransaction);
+ReportRouter.get('/receipt/chequeAccounts', receiptReport.getChequeAccounts);
+ReportRouter.get('/receipt/chequeCreditAccounts', receiptReport.getChequeCreditAccounts);
+ReportRouter.get('/receipt/chequeVoucherTypes', receiptReport.getChequeVoucherTypes);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
