@@ -792,3 +792,30 @@ export const BankBoxReport = async (req, res) => {
         servError(error, res);
     }
 }
+
+export const CashListDetailedReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Cash_List_VW_Detailed @Fromdate, @Todate`);
+
+        const [OB, Data, Group] = result.recordsets || [];
+
+        if (!Data || Data.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            OB, Data, Group
+        });
+
+    } catch (error) {
+        servError(error, res);
+    }
+}
