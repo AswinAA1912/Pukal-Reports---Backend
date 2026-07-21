@@ -13,7 +13,8 @@ import {
     GodownInstockSummary,
     StockInOutProcess,
     BankBoxReport,
-    CashListDetailedReport
+    CashListDetailedReport,
+    BankListDetailedReport
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -70,6 +71,7 @@ ReportRouter.get('/externalAPI/pendingSaleOrder', PendingSaleOrderReport);
 ReportRouter.get('/externalAPI/pendingSaleOrderItem', PendingSaleOrderReportItem);
 ReportRouter.get('/externalAPI/godownSummaryInstock', GodownInstockSummary);
 ReportRouter.get('/externalAPI/cashListDetailed', CashListDetailedReport);
+ReportRouter.get('/externalAPI/bankListDetailed', BankListDetailedReport);
 ReportRouter.get('/externalAPI/stockinoutprocess', StockInOutProcess);
 ReportRouter.get('/receipt/chequeTransaction', receiptReport.getChequeTransaction);
 ReportRouter.get('/receipt/chequeAccounts', receiptReport.getChequeAccounts);
