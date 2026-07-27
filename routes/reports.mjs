@@ -14,7 +14,9 @@ import {
     StockInOutProcess,
     BankBoxReport,
     CashListDetailedReport,
-    BankListDetailedReport
+    BankListDetailedReport,
+    RecievableReport,
+    PayableReport
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -77,6 +79,8 @@ ReportRouter.get('/receipt/chequeTransaction', receiptReport.getChequeTransactio
 ReportRouter.get('/receipt/chequeAccounts', receiptReport.getChequeAccounts);
 ReportRouter.get('/receipt/chequeCreditAccounts', receiptReport.getChequeCreditAccounts);
 ReportRouter.get('/receipt/chequeVoucherTypes', receiptReport.getChequeVoucherTypes);
+ReportRouter.get('/externalAPI/recievable', RecievableReport);
+ReportRouter.get('/externalAPI/payable', PayableReport);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);

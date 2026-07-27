@@ -846,3 +846,41 @@ export const BankListDetailedReport = async (req, res) => {
         servError(error, res);
     }
 }
+
+export const RecievableReport = async (req, res) => {
+    try {
+        const { Fromdate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .query(`EXEC Transaction_Recivables_Reort_VW @Fromdate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const PayableReport = async (req, res) => {
+    try {
+        const { Fromdate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .query(`EXEC Transaction_Payables_Reort_VW @Fromdate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
