@@ -849,13 +849,13 @@ export const BankListDetailedReport = async (req, res) => {
 
 export const RecievableReport = async (req, res) => {
     try {
-        const { Fromdate } = req.query;
+        const { Todate } = req.query;
 
-        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
 
         const result = await new sql.Request()
-            .input("Fromdate", fromDate)
-            .query(`EXEC Transaction_Recivables_Reort_VW @Fromdate`);
+            .input("Todate", toDate)
+            .query(`EXEC Transaction_Recivables_Reort_VW @Todate`);
 
         const recordset = result.recordset ?? [];
         if (!recordset.length) return noData(res);
@@ -868,13 +868,34 @@ export const RecievableReport = async (req, res) => {
 
 export const PayableReport = async (req, res) => {
     try {
-        const { Fromdate } = req.query;
+        const { Todate } = req.query;
+
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Todate", toDate)
+            .query(`EXEC Transaction_Payables_Reort_VW @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const SalesDeliveryCummulativeReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
 
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
 
         const result = await new sql.Request()
             .input("Fromdate", fromDate)
-            .query(`EXEC Transaction_Payables_Reort_VW @Fromdate`);
+            .input("Todate", toDate)
+            .query(`EXEC SalesDeliveryCummulativeReport @Fromdate, @Todate`);
 
         const recordset = result.recordset ?? [];
         if (!recordset.length) return noData(res);
