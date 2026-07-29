@@ -38,6 +38,26 @@ async function runTest() {
             console.log("[Route Handler 2] Active DB Name:", (await new sql.Request().query("SELECT DB_NAME() AS db")).recordset[0].db);
         });
 
+        // Call dbconnect with Company_Id = 3 (PUKAL TECHNOLOGIES) in query parameters
+        console.log("\n--- Request 3: Company_Id = 3 in query params ---");
+        const mock3 = {
+            req: {
+                get: (name) => null,
+                header: (name) => null,
+                body: {},
+                query: { Fromdate: '2026-01-01', Todate: '2026-07-06', Company_Id: '3' },
+                path: '/api/reports/salesReport/ledger'
+            },
+            res: {
+                status: (code) => ({
+                    json: (data) => console.log(`[Response mock3] code: ${code}, success: ${data.success}, message: ${data.message}`)
+                })
+            }
+        };
+        await dbconnect(mock3.req, mock3.res, async () => {
+            console.log("[Route Handler 3] Active DB Name:", (await new sql.Request().query("SELECT DB_NAME() AS db")).recordset[0].db);
+        });
+
         await portalPool.close();
     } catch (e) {
         console.error("Test failed:", e);

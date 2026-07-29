@@ -70,7 +70,9 @@ const dbconnect = async (req, res, next) => {
     return next();
   }
 
-  let Db = req.get('Db') || req.body?.companyId || req.body?.company_id || req.query?.companyId || req.query?.company_id;
+  let Db = req.get('Db') || req.get('companyId') || req.get('company_id') || req.get('CompanyId') || req.get('Company_Id') ||
+           req.body?.companyId || req.body?.company_id || req.body?.CompanyId || req.body?.Company_Id ||
+           req.query?.companyId || req.query?.company_id || req.query?.CompanyId || req.query?.Company_Id;
 
   // Fallback to SELECTED_COMPANY_ID if no dynamic Db is provided
   if (!Db && process.env.SELECTED_COMPANY_ID) {
