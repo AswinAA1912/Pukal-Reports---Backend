@@ -17,7 +17,8 @@ import {
     BankListDetailedReport,
     RecievableReport,
     PayableReport,
-    SalesDeliveryCummulativeReport
+    SalesDeliveryCummulativeReport,
+    SalesDeliveryDaywiseReport
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -83,6 +84,7 @@ ReportRouter.get('/receipt/chequeVoucherTypes', receiptReport.getChequeVoucherTy
 ReportRouter.get('/externalAPI/recievable', RecievableReport);
 ReportRouter.get('/externalAPI/payable', PayableReport);
 ReportRouter.get('/externalAPI/salesDeliveryCummulative', SalesDeliveryCummulativeReport);
+ReportRouter.get('/externalAPI/salesDeliveryDaywise', SalesDeliveryDaywiseReport);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
