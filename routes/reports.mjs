@@ -39,6 +39,9 @@ ReportRouter.get('/storageStock/godownitemWise', storageStockReport.getStorageSt
 // expenses reports
 ReportRouter.get('/itemexpenseReport', expences.itemsTransactionExpandable);
 ReportRouter.get('/godownexpenseReport', expences.godownTransactionExpandable);
+ReportRouter.get('/godownitemOutexpandable', expences.godownTransactionoutExpandable);
+ReportRouter.get('/godownitemInexpandable', expences.godownTransactioninExpandable);
+ReportRouter.get('/godownitemprocess', expences.godownTransactionprocessExpandable);
 
 // external APIs
 ReportRouter.get('/externalAPI/onlineSalesReport', onlineSalesReport);

@@ -1,5 +1,5 @@
 import sql from 'mssql'
-import { servError, sentData, invalidInput, success, dataFound,noData } from '../../res.mjs';
+import { servError, sentData, invalidInput, success, dataFound, noData } from '../../res.mjs';
 
 const ExpencesMasterController = () => {
 
@@ -182,150 +182,268 @@ OPTION (MAXRECURSION 0);
         }
     };
 
-const buildTransactionLedger = (rows) => {
-    const monthMap = {};
+    const buildTransactionLedger = (rows) => {
+        const monthMap = {};
 
-    rows.forEach(row => {
-        const monthKey = row.Month_Year; // "January 2026"
-        const dateKey = row.Ledger_Date;
+        rows.forEach(row => {
+            const monthKey = row.Month_Year; // "January 2026"
+            const dateKey = row.Ledger_Date;
 
-        if (!monthMap[monthKey]) {
-            monthMap[monthKey] = {
-                Month_Year: monthKey,
-                Month_No: row.Month_No,
-                Invoice_Month: row.Invoice_Month,
-                Invoice_Year: row.Invoice_Year,
-                Dates: {}
-            };
+            if (!monthMap[monthKey]) {
+                monthMap[monthKey] = {
+                    Month_Year: monthKey,
+                    Month_No: row.Month_No,
+                    Invoice_Month: row.Invoice_Month,
+                    Invoice_Year: row.Invoice_Year,
+                    Dates: {}
+                };
+            }
+
+            if (!monthMap[monthKey].Dates[dateKey]) {
+                monthMap[monthKey].Dates[dateKey] = {
+                    Ledger_Date: dateKey,
+                    OpeningBalance: null,
+                    Transactions: []
+                };
+            }
+
+            // 🟢 Opening Balance
+            if (row.invoice_no === 'OB') {
+                monthMap[monthKey].Dates[dateKey].OpeningBalance = {
+                    In_Qty: Number(row.In_Qty || 0),
+                    Out_Qty: Number(row.Out_Qty || 0),
+                    Amount: Number(row.Amount || 0)
+                };
+            }
+            // 🔵 Regular Transactions
+            else {
+                monthMap[monthKey].Dates[dateKey].Transactions.push({
+                    invoice_no: row.invoice_no,
+                    Batch: row.Batch,
+                    Product_Id: row.Product_Id,
+                    Product_Name: row.Product_Name,
+                    Godown_Id: row.Godown_Id,
+                    Godown_Name: row.Godown_Name,
+                    In_Qty: Number(row.In_Qty),
+                    Out_Qty: Number(row.Out_Qty),
+                    Rate: Number(row.Rate),
+                    Amount: Number(row.Amount),
+                    Trans_Id: row.Trans_Id,
+                    voucher_name: row.voucher_name,
+                    Particulars: row.Particulars,
+                    Retailer_Name: row.Retailer_Name,
+                    ord: row.ord
+                });
+            }
+        });
+
+        // Convert Maps → Arrays
+        return Object.values(monthMap).map(month => ({
+            ...month,
+            Dates: Object.values(month.Dates)
+        }));
+    };
+
+
+    const itemsTransactionExpandable = async (req, res) => {
+        const {
+            fromDate,
+            toDate,
+            Fromdate,
+            Todate,
+            Product_Id
+        } = req.query;
+
+        const finalFromDate = fromDate || Fromdate;
+        const finalToDate = toDate || Todate;
+
+        try {
+            const request = new sql.Request();
+
+            request.input('FromDate', sql.NVarChar(200), finalFromDate);
+            request.input('ToDate', sql.NVarChar(200), finalToDate);
+            request.input('Product_Id', sql.Int, Number(Product_Id));
+
+            const result = await request.execute(
+                'Transaction_Stock_Report_vw_By_Pro_Id'
+            );
+
+            if (result?.recordset?.length > 0) {
+                return dataFound(res, result.recordset);
+            }
+
+            return noData(res);
+
+        } catch (error) {
+            console.error(error);
+            return servError(error, res);
         }
+    };
 
-        if (!monthMap[monthKey].Dates[dateKey]) {
-            monthMap[monthKey].Dates[dateKey] = {
-                Ledger_Date: dateKey,
-                OpeningBalance: null,
-                Transactions: []
-            };
+
+
+
+    const godownTransactionExpandable = async (req, res) => {
+        const {
+            fromDate,
+            toDate,
+            Fromdate,
+            Todate,
+            Product_Id,
+            Godown_Id
+        } = req.query;
+
+        const finalFromDate = fromDate || Fromdate;
+        const finalToDate = toDate || Todate;
+
+        try {
+            const request = new sql.Request();
+
+            request.input('FromDate', sql.NVarChar(200), finalFromDate);
+            request.input('ToDate', sql.NVarChar(200), finalToDate);
+            request.input('Product_Id', sql.Int, Number(Product_Id));
+            request.input('Godown_Id', sql.Int, Number(Godown_Id));
+
+            const result = await request.execute(
+                'Transaction_Stock_Report_vw_By_Pro_Id_And_Godown_Id '
+            );
+
+            if (result?.recordset?.length > 0) {
+                return dataFound(res, result.recordset);
+            }
+
+            return noData(res);
+
+        } catch (error) {
+            console.error(error);
+            return servError(error, res);
         }
+    };
 
-        // 🟢 Opening Balance
-        if (row.invoice_no === 'OB') {
-            monthMap[monthKey].Dates[dateKey].OpeningBalance = {
-                In_Qty: Number(row.In_Qty || 0),
-                Out_Qty: Number(row.Out_Qty || 0),
-                Amount: Number(row.Amount || 0)
-            };
-        } 
-        // 🔵 Regular Transactions
-        else {
-            monthMap[monthKey].Dates[dateKey].Transactions.push({
-                invoice_no: row.invoice_no,
-                Batch: row.Batch,
-                Product_Id: row.Product_Id,
-                Product_Name: row.Product_Name,
-                Godown_Id: row.Godown_Id,
-                Godown_Name: row.Godown_Name,
-                In_Qty: Number(row.In_Qty),
-                Out_Qty: Number(row.Out_Qty),
-                Rate: Number(row.Rate),
-                Amount: Number(row.Amount),
-                Trans_Id: row.Trans_Id,
-                voucher_name: row.voucher_name,
-                Particulars: row.Particulars,
-                Retailer_Name: row.Retailer_Name,
-                ord: row.ord
-            });
+    const godownTransactionoutExpandable = async (req, res) => {
+        const {
+            fromDate,
+            toDate,
+            Fromdate,
+            Todate,
+            Product_Id,
+            Godown_Id,
+            Trip_No,
+        } = req.query;
+
+        const finalFromDate = fromDate || Fromdate;
+        const finalToDate = toDate || Todate;
+
+        try {
+            const request = new sql.Request();
+
+            request.input('FromDate', sql.NVarChar(200), finalFromDate);
+            request.input('ToDate', sql.NVarChar(200), finalToDate);
+            request.input('Product_Id', sql.Int, Number(Product_Id));
+            request.input('Godown_Id', sql.Int, Number(Godown_Id));
+            request.input('Trip_No', sql.Int, Number(Trip_No));
+
+            const result = await request.execute(
+                'SP_Pending_Sales_Delivery_Details'
+            );
+
+            if (result?.recordset?.length > 0) {
+                return dataFound(res, result.recordset);
+            }
+
+            return noData(res);
+
+        } catch (error) {
+            console.error(error);
+            return servError(error, res);
         }
-    });
+    };
 
-    // Convert Maps → Arrays
-    return Object.values(monthMap).map(month => ({
-        ...month,
-        Dates: Object.values(month.Dates)
-    }));
-};
+    const godownTransactioninExpandable = async (req, res) => {
+        const {
+            fromDate,
+            toDate,
+            Fromdate,
+            Todate,
+            Product_Id,
+            Godown_Id,
+            Trip_No,
+        } = req.query;
 
-    
-const itemsTransactionExpandable = async (req, res) => {
-    const {
-        fromDate,
-        toDate,
-        Fromdate,
-        Todate,
-        Product_Id
-    } = req.query;
+        const finalFromDate = fromDate || Fromdate;
+        const finalToDate = toDate || Todate;
 
-    const finalFromDate = fromDate || Fromdate;
-    const finalToDate = toDate || Todate;
+        try {
+            const request = new sql.Request();
 
-    try {
-        const request = new sql.Request();
+            request.input('FromDate', sql.NVarChar(200), finalFromDate);
+            request.input('ToDate', sql.NVarChar(200), finalToDate);
+            request.input('Product_Id', sql.Int, Number(Product_Id));
+            request.input('Godown_Id', sql.Int, Number(Godown_Id));
+            request.input('Trip_No', sql.Int, Number(Trip_No));
 
-        request.input('FromDate', sql.NVarChar(200), finalFromDate);
-        request.input('ToDate', sql.NVarChar(200), finalToDate);
-        request.input('Product_Id', sql.Int, Number(Product_Id));
+            const result = await request.execute(
+                'SP_Pending_Sales_Arrival_Details'
+            );
 
-        const result = await request.execute(
-            'Transaction_Stock_Report_vw_By_Pro_Id'
-        );
+            if (result?.recordset?.length > 0) {
+                return dataFound(res, result.recordset);
+            }
 
-        if (result?.recordset?.length > 0) {
-            return dataFound(res, result.recordset);
+            return noData(res);
+
+        } catch (error) {
+            console.error(error);
+            return servError(error, res);
         }
+    };
 
-        return noData(res);
+    const godownTransactionprocessExpandable = async (req, res) => {
+        const {
+            fromDate,
+            toDate,
+            Fromdate,
+            Todate,
+            Product_Id,
+            Godown_Id
+        } = req.query;
 
-    } catch (error) {
-        console.error(error);
-        return servError(error, res);
-    }
-};
+        const finalFromDate = fromDate || Fromdate;
+        const finalToDate = toDate || Todate;
 
+        try {
+            const request = new sql.Request();
 
+            request.input('FromDate', sql.NVarChar(200), finalFromDate);
+            request.input('ToDate', sql.NVarChar(200), finalToDate);
+            request.input('Product_Id', sql.Int, Number(Product_Id));
+            request.input('Godown_Id', sql.Int, Number(Godown_Id));
 
-    
-const godownTransactionExpandable = async (req, res) => {
-    const {
-        fromDate,
-        toDate,
-        Fromdate,
-        Todate,
-        Product_Id,
-        Godown_Id
-    } = req.query;
+            const result = await request.execute(
+                'SP_Process_Invoice_Details'
+            );
 
-    const finalFromDate = fromDate || Fromdate;
-    const finalToDate = toDate || Todate;
+            if (result?.recordset?.length > 0) {
+                return dataFound(res, result.recordset);
+            }
 
-    try {
-        const request = new sql.Request();
+            return noData(res);
 
-        request.input('FromDate', sql.NVarChar(200), finalFromDate);
-        request.input('ToDate', sql.NVarChar(200), finalToDate);
-        request.input('Product_Id', sql.Int, Number(Product_Id));
-         request.input('Godown_Id', sql.Int, Number(Godown_Id));
-
-        const result = await request.execute(
-            'Transaction_Stock_Report_vw_By_Pro_Id_And_Godown_Id '
-        );
-
-        if (result?.recordset?.length > 0) {
-            return dataFound(res, result.recordset);
+        } catch (error) {
+            console.error(error);
+            return servError(error, res);
         }
-
-        return noData(res);
-
-    } catch (error) {
-        console.error(error);
-        return servError(error, res);
-    }
-};
+    };
 
 
     return {
         getExpences,
         expensesExpandable,
         itemsTransactionExpandable,
-        godownTransactionExpandable
+        godownTransactionExpandable,
+        godownTransactionoutExpandable,
+        godownTransactioninExpandable,
+        godownTransactionprocessExpandable
     };
 };
 
