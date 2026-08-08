@@ -891,11 +891,13 @@ export const SalesDeliveryCummulativeReport = async (req, res) => {
 
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
         const toDate = Todate ? ISOString(Todate) : ISOString();
+        const godown_id = req.query.GodownId || req.query.Godown_Id || req.query.godownId || req.query.godown_Id || null;
 
         const result = await new sql.Request()
             .input("Fromdate", fromDate)
             .input("Todate", toDate)
-            .query(`EXEC SalesDeliveryCummulativeReport @Fromdate, @Todate`);
+            .input("Godown_Id", godown_id)
+            .query(`EXEC SalesDeliveryCummulativeReport @Fromdate, @Todate, @Godown_Id`);
 
         const recordset = result.recordset ?? [];
         if (!recordset.length) return noData(res);
@@ -912,11 +914,13 @@ export const SalesDeliveryDaywiseReport = async (req, res) => {
 
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
         const toDate = Todate ? ISOString(Todate) : ISOString();
+        const godown_id = req.query.GodownId || req.query.Godown_Id || req.query.godownId || req.query.godown_Id || null;
 
         const result = await new sql.Request()
             .input("Fromdate", fromDate)
             .input("Todate", toDate)
-            .query(`EXEC SalesDeliveryDatewiseReport @Fromdate, @Todate`);
+            .input("Godown_Id", godown_id)
+            .query(`EXEC SalesDeliveryDatewiseReport @Fromdate, @Todate, @Godown_Id`);
 
         const recordset = result.recordset ?? [];
         if (!recordset.length) return noData(res);
