@@ -262,7 +262,7 @@ OPTION (MAXRECURSION 0);
 
             request.input('FromDate', sql.NVarChar(200), finalFromDate);
             request.input('ToDate', sql.NVarChar(200), finalToDate);
-            request.input('Product_Id', sql.Int, Number(Product_Id));
+            request.input('Product_Id', sql.Int, (Product_Id && !isNaN(Number(Product_Id))) ? Number(Product_Id) : null);
 
             const result = await request.execute(
                 'Transaction_Stock_Report_vw_By_Pro_Id'
@@ -301,8 +301,8 @@ OPTION (MAXRECURSION 0);
 
             request.input('FromDate', sql.NVarChar(200), finalFromDate);
             request.input('ToDate', sql.NVarChar(200), finalToDate);
-            request.input('Product_Id', sql.Int, Number(Product_Id));
-            request.input('Godown_Id', sql.Int, Number(Godown_Id));
+            request.input('Product_Id', sql.Int, (Product_Id && !isNaN(Number(Product_Id))) ? Number(Product_Id) : null);
+            request.input('Godown_Id', sql.Int, (Godown_Id && !isNaN(Number(Godown_Id))) ? Number(Godown_Id) : null);
 
             const result = await request.execute(
                 'Transaction_Stock_Report_vw_By_Pro_Id_And_Godown_Id '
@@ -339,9 +339,9 @@ OPTION (MAXRECURSION 0);
 
             request.input('FromDate', sql.NVarChar(200), finalFromDate);
             request.input('ToDate', sql.NVarChar(200), finalToDate);
-            request.input('Product_Id', sql.Int, Number(Product_Id));
-            request.input('Godown_Id', sql.Int, Number(Godown_Id));
-            request.input('Trip_No', sql.Int, Number(Trip_No));
+            request.input('Product_Id', sql.Int, (Product_Id && !isNaN(Number(Product_Id))) ? Number(Product_Id) : null);
+            request.input('Godown_Id', sql.Int, (Godown_Id && !isNaN(Number(Godown_Id))) ? Number(Godown_Id) : null);
+            request.input('Trip_No', sql.Int, (Trip_No && !isNaN(Number(Trip_No))) ? Number(Trip_No) : null);
 
             const result = await request.execute(
                 'SP_Pending_Sales_Delivery_Details'
@@ -378,9 +378,9 @@ OPTION (MAXRECURSION 0);
 
             request.input('FromDate', sql.NVarChar(200), finalFromDate);
             request.input('ToDate', sql.NVarChar(200), finalToDate);
-            request.input('Product_Id', sql.Int, Number(Product_Id));
-            request.input('Godown_Id', sql.Int, Number(Godown_Id));
-            request.input('Trip_No', sql.Int, Number(Trip_No));
+            request.input('Product_Id', sql.Int, (Product_Id && !isNaN(Number(Product_Id))) ? Number(Product_Id) : null);
+            request.input('Godown_Id', sql.Int, (Godown_Id && !isNaN(Number(Godown_Id))) ? Number(Godown_Id) : null);
+            request.input('Trip_No', sql.Int, (Trip_No && !isNaN(Number(Trip_No))) ? Number(Trip_No) : null);
 
             const result = await request.execute(
                 'SP_Pending_Sales_Arrival_Details'
@@ -416,8 +416,8 @@ OPTION (MAXRECURSION 0);
 
             request.input('FromDate', sql.NVarChar(200), finalFromDate);
             request.input('ToDate', sql.NVarChar(200), finalToDate);
-            request.input('Product_Id', sql.Int, Number(Product_Id));
-            request.input('Godown_Id', sql.Int, Number(Godown_Id));
+            request.input('Product_Id', sql.Int, (Product_Id && !isNaN(Number(Product_Id))) ? Number(Product_Id) : null);
+            request.input('Godown_Id', sql.Int, (Godown_Id && !isNaN(Number(Godown_Id))) ? Number(Godown_Id) : null);
 
             const result = await request.execute(
                 'SP_Process_Invoice_Details'
