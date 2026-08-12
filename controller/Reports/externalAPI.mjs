@@ -394,7 +394,7 @@ export const StockValueGraph = async (req, res) => {
 
 export const StockValueReport = async (req, res) => {
     try {
-        const { Fromdate } = req.query;
+        const Fromdate = req.query.Fromdate || req.query.FromDate;
 
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
         const result = await new sql.Request()
