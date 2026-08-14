@@ -556,3 +556,152 @@ export const deleteReport = async (req, res) => {
     }
 };
 
+
+
+export const getEmployeeReportGroups = async (req, res) => {
+    try {
+        const { overallGroupId, groupName } = req.query;
+
+        let query = `
+            SELECT 
+                erg.Id,
+                erg.Group_Name,
+                erg.Overall_GroupId,
+                og.GroupName AS Overall_GroupName,
+                erg.VoucherId,
+                vt.Voucher_Type_Name,
+                erg.Created_By,
+                erg.Created_At,
+                erg.Updated_By,
+                erg.Updated_At
+            FROM tbl_Repots_EmployeeReport_Group erg
+            LEFT JOIN tbl_Report_OverAll_Group og ON og.Id = erg.Overall_GroupId
+            LEFT JOIN tbl_Voucher_Type vt ON vt.Voucher_Type_Id = erg.VoucherId
+            WHERE 1 = 1
+        `;
+
+        const request = new sql.Request();
+
+        if (overallGroupId) {
+            query += ` AND erg.Overall_GroupId = @overallGroupId`;
+            request.input("overallGroupId", sql.Int, overallGroupId);
+        }
+
+        if (groupName) {
+            query += ` AND erg.Group_Name = @groupName`;
+            request.input("groupName", sql.NVarChar, groupName);
+        }
+
+        query += ` ORDER BY erg.Group_Name, erg.VoucherId`;
+
+        const result = await request.query(query);
+
+        return res.json({
+            success: true,
+            data: result.recordset
+        });
+
+    } catch (err) {
+        console.error("GET EMPLOYEE REPORT GROUPS ERROR:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Error fetching employee report groups"
+        });
+    }
+};
+
+
+export const createEmployeeReportGroup = async (req, res) => {
+    try {
+        const { groupName, overallGroupId, voucherId, createdBy } = req.body;
+
+        if (!groupName || !overallGroupId || !voucherId) {
+            return res.status(400).json({
+                success: false,
+                message: "groupName, overallGroupId and voucherId are required"
+            });
+        }
+
+        const result = await sql.query`
+            INSERT INTO tbl_Repots_EmployeeReport_Group
+                (Group_Name, Overall_GroupId, VoucherId, Created_By, Created_At)
+            OUTPUT INSERTED.Id
+            VALUES
+                (${groupName}, ${overallGroupId}, ${voucherId}, ${createdBy || null}, GETDATE())
+        `;
+
+        return res.status(201).json({
+            success: true,
+            message: "Employee report group created successfully",
+            data: { Id: result.recordset[0].Id }
+        });
+
+    } catch (err) {
+        console.error("CREATE EMPLOYEE REPORT GROUP ERROR:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Error creating employee report group"
+        });
+    }
+};
+
+
+
+export const updateEmployeeReportGroup = async (req, res) => {
+    const transaction = new sql.Transaction();
+
+    try {
+        const { groupName, overallGroupId, voucherIds, updatedBy } = req.body;
+
+        if (!groupName || !overallGroupId || !Array.isArray(voucherIds) || voucherIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "groupName, overallGroupId and a non-empty voucherIds array are required"
+            });
+        }
+
+        await transaction.begin();
+
+
+        const deleteRequest = new sql.Request(transaction);
+        deleteRequest.input("groupName", sql.NVarChar, groupName);
+        deleteRequest.input("overallGroupId", sql.Int, overallGroupId);
+
+        await deleteRequest.query(`
+            DELETE FROM tbl_Repots_EmployeeReport_Group
+            WHERE Group_Name = @groupName
+              AND Overall_GroupId = @overallGroupId
+        `);
+
+        // 2. Insert new rows, one per VoucherId
+        for (const voucherId of voucherIds) {
+            const insertRequest = new sql.Request(transaction);
+            insertRequest.input("groupName", sql.NVarChar, groupName);
+            insertRequest.input("overallGroupId", sql.Int, overallGroupId);
+            insertRequest.input("voucherId", sql.Int, voucherId);
+            insertRequest.input("updatedBy", sql.NVarChar, updatedBy || null);
+
+            await insertRequest.query(`
+                INSERT INTO tbl_Repots_EmployeeReport_Group
+                    (Group_Name, Overall_GroupId, VoucherId, Created_By, Created_At)
+                VALUES
+                    (@groupName, @overallGroupId, @voucherId, @updatedBy, GETDATE())
+            `);
+        }
+
+        await transaction.commit();
+
+        return res.json({
+            success: true,
+            message: "Employee report group updated successfully"
+        });
+
+    } catch (err) {
+        await transaction.rollback();
+        console.error("UPDATE EMPLOYEE REPORT GROUP ERROR:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Error updating employee report group"
+        });
+    }
+};
