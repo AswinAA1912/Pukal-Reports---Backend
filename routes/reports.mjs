@@ -22,7 +22,8 @@ import {
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
-    MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport
+    MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport,updateEmployeeReportGroup,createEmployeeReportGroup,
+    getEmployeeReportGroups
 } from '../controller/Reports/reportsettings.mjs';
 
 const ReportRouter = express.Router();
@@ -103,5 +104,12 @@ ReportRouter.delete('/settings/deleteReport/:reportId', deleteReport);
 // storage stock value reports
 ReportRouter.get('/storageStock/stockvalueitem', storageStockReport.getStorageStockValueItemWise);
 ReportRouter.get('/storageStock/stockvaluegodown', storageStockReport.getStorageStockValueGodownWise);
+
+
+ReportRouter.put('/settings/updateEmployeeReportGroup', updateEmployeeReportGroup);
+ReportRouter.post('/settings/createEmployeeReportGroup', createEmployeeReportGroup);
+ReportRouter.get('/settings/getEmployeeReportGroups', getEmployeeReportGroups); 
+
+
 
 export default ReportRouter;
