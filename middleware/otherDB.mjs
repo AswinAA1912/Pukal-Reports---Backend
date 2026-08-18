@@ -160,13 +160,27 @@ const dbconnect = async (req, res, next) => {
         activePool = await pool.connect();
       } catch (poolErr) {
         // Fallback: If primary database server is offline (e.g. timeout on 122.165.240.65 or 192.168.1.52),
-        // try to connect to the active test server (103.14.120.9) using the same database name
+        // try to connect to the active test server (103.14.120.9) mapping the database name appropriately
         const currentServer = config.server;
         if (currentServer !== "103.14.120.9") {
           console.warn(`[otherDB] Connection to primary server ${currentServer} failed: ${poolErr.message}. Attempting fallback to test server 103.14.120.9...`);
+          
+          let fallbackDatabase = config.database;
+          if (process.env.DB_NAME_MAPPING) {
+            const mappings = process.env.DB_NAME_MAPPING.split(',');
+            for (const m of mappings) {
+              const [dbName, idStr] = m.split('=');
+              if (idStr === String(Db)) {
+                fallbackDatabase = dbName;
+                break;
+              }
+            }
+          }
+
           const fallbackConfig = {
             ...config,
             server: "103.14.120.9",
+            database: fallbackDatabase,
             user: "SMT_ADMIN",
             password: "yvKj3699^"
           };
@@ -300,6 +314,37 @@ const ensureReportTablesExist = async (pool) => {
         BEGIN CATCH
           -- Fallback if Pukal Foods DB is not available
         END CATCH
+      END
+    `);
+
+    // 4. Check/create tbl_Report_OverAll_Group
+    await request.query(`
+      IF OBJECT_ID('tbl_Report_OverAll_Group') IS NULL
+      BEGIN
+        CREATE TABLE tbl_Report_OverAll_Group (
+          Id BIGINT IDENTITY(1,1) PRIMARY KEY,
+          GroupName NVARCHAR(50) NULL,
+          Created_By DATETIME2 NULL
+        );
+        INSERT INTO tbl_Report_OverAll_Group (GroupName)
+        VALUES ('INWARDS'), ('PROCESS'), ('OUTWARDS');
+      END
+    `);
+
+    // 5. Check/create tbl_Repots_EmployeeReport_Group
+    await request.query(`
+      IF OBJECT_ID('tbl_Repots_EmployeeReport_Group') IS NULL
+      BEGIN
+        CREATE TABLE tbl_Repots_EmployeeReport_Group (
+          Id BIGINT IDENTITY(1,1) PRIMARY KEY,
+          Group_Name NVARCHAR(50) NULL,
+          Overall_GroupId BIGINT NULL,
+          VoucherId BIGINT NULL,
+          Created_By BIGINT NULL,
+          Created_At DATETIME NULL,
+          Updated_By BIGINT NULL,
+          Updated_At DATETIME NULL
+        );
       END
     `);
 

@@ -930,3 +930,80 @@ export const SalesDeliveryDaywiseReport = async (req, res) => {
         servError(error, res);
     }
 };
+
+export const OverallStaffBasedCategorywiseReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        if (fromDate > toDate) {
+            return noData(res);
+        }
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC SP_Get_EmployeeReport_By_CostCategory_AllModules @Fromdate, @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+}
+
+export const getEmployeeReportGroupEmployees = async (req, res) => {
+    try {
+        const { Fromdate, Todate, Overall_GroupName, Group_Name, Voucher_Type } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("FromDate", sql.Date, fromDate)
+            .input("ToDate", sql.Date, toDate)
+            .input("Overall_GroupName", sql.NVarChar(255), Overall_GroupName || null)
+            .input("Group_Name", sql.NVarChar(255), Group_Name || null)
+            .input("Voucher_Type", sql.NVarChar(255), Voucher_Type || null)
+            .execute("SP_Get_EmployeeReport_GroupEmployees");
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const getEmployeeReportEmployeeInvoices = async (req, res) => {
+    try {
+        const { Fromdate, Todate, Overall_GroupName, Group_Name, Voucher_Type, Emp_Id, Emp_Id_Is_Unassigned } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const isUnassigned = Emp_Id_Is_Unassigned === 'true' || Emp_Id_Is_Unassigned === '1' ? 1 : 0;
+
+        const result = await new sql.Request()
+            .input("FromDate", sql.Date, fromDate)
+            .input("ToDate", sql.Date, toDate)
+            .input("Overall_GroupName", sql.NVarChar(255), Overall_GroupName || null)
+            .input("Group_Name", sql.NVarChar(255), Group_Name || null)
+            .input("Voucher_Type", sql.NVarChar(255), Voucher_Type || null)
+            .input("Emp_Id", sql.Int, Emp_Id ? Number(Emp_Id) : null)
+            .input("Emp_Id_Is_Unassigned", sql.Bit, isUnassigned)
+            .execute("SP_Get_EmployeeReport_EmployeeInvoices");
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};

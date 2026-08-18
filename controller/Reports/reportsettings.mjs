@@ -1,4 +1,4 @@
-import sql from "mssql";
+﻿import sql from "mssql";
 import { servError, noData, dataFound } from "../../res.mjs";
 
 export const MenuSettings = async (req, res) => {
@@ -50,7 +50,7 @@ export const executeSP = async (req, res) => {
         spParams.forEach((paramName) => {
             let value = undefined;
 
-            // 🔥 case-insensitive match
+            // ðŸ”¥ case-insensitive match
             if (params && typeof params === "object") {
                 const normalize = (str) => str.replace(/_/g, "").toLowerCase();
 
@@ -67,11 +67,11 @@ export const executeSP = async (req, res) => {
             if (value !== undefined) {
                 request.input(paramName, value);
             } else {
-                /* 🔥 DEFAULT HANDLING (customize if needed) */
+                /* ðŸ”¥ DEFAULT HANDLING (customize if needed) */
                 if (paramName.toLowerCase() === "ledger_id") {
                     request.input("Ledger_Id", 0); // default fallback
                 }
-                // 👉 You can add more defaults here if needed
+                // ðŸ‘‰ You can add more defaults here if needed
             }
         });
 
@@ -166,6 +166,7 @@ export const saveReportSettings = async (req, res) => {
             const normalizeType = (type = "") => {
                 const t = type.toLowerCase();
 
+                if (t === "qty" || t === "count") return t;
                 if (t.includes("int")) return "int";
                 if (t.includes("decimal") || t.includes("numeric")) return "decimal";
                 if (t.includes("date") || t.includes("time")) return "datetime";
@@ -179,7 +180,7 @@ export const saveReportSettings = async (req, res) => {
 
                 await new sql.Request(transaction)
                     .input("Report_Id", sql.Int, reportId)
-                    .input("Type_Id", sql.Int, typeId) // ✅ FIXED ID
+                    .input("Type_Id", sql.Int, typeId) // âœ… FIXED ID
                     .input("Field_Id", sql.Int, fieldIndex++)
                     .input("Field_Name", sql.VarChar, col.key)
                     .input("Fied_Data", sql.VarChar, normalizeType(col.dataType))
@@ -355,7 +356,7 @@ export const getReportEditData = async (req, res) => {
             key: row.Field_Name,
             label: row.Field_Name,
 
-            // ✅ MAIN REQUIREMENT
+            // âœ… MAIN REQUIREMENT
             enabled: row.Enable_By === 1,
 
             order: row.Order_By ?? index + 1,
@@ -394,7 +395,7 @@ export const updateReportSettings = async (req, res) => {
 
         await transaction.begin();
 
-        /* 🔥 UPDATE REPORT NAME IF PROVIDED */
+        /* ðŸ”¥ UPDATE REPORT NAME IF PROVIDED */
         if (reportName) {
             await new sql.Request(transaction)
                 .input("Report_Id", sql.Int, reportId)
@@ -406,7 +407,7 @@ export const updateReportSettings = async (req, res) => {
                 `);
         }
 
-        /* 🔥 DELETE OLD */
+        /* ðŸ”¥ DELETE OLD */
         await new sql.Request(transaction)
             .input("Report_Id", sql.Int, reportId)
             .input("Type_Id", sql.Int, typeId)
@@ -415,7 +416,7 @@ export const updateReportSettings = async (req, res) => {
                 WHERE Report_Id = @Report_Id AND Type_Id = @Type_Id
             `);
 
-        /* 🔥 INSERT NEW */
+        /* ðŸ”¥ INSERT NEW */
         let fieldIndex = 1;
 
         for (let col of columns) {
@@ -569,14 +570,14 @@ export const getEmployeeReportGroups = async (req, res) => {
                 erg.Overall_GroupId,
                 og.GroupName AS Overall_GroupName,
                 erg.VoucherId,
-                vt.Voucher_Type_Name,
+                vt.Voucher_Type AS Voucher_Type_Name,
                 erg.Created_By,
                 erg.Created_At,
                 erg.Updated_By,
                 erg.Updated_At
             FROM tbl_Repots_EmployeeReport_Group erg
             LEFT JOIN tbl_Report_OverAll_Group og ON og.Id = erg.Overall_GroupId
-            LEFT JOIN tbl_Voucher_Type vt ON vt.Voucher_Type_Id = erg.VoucherId
+            LEFT JOIN tbl_Voucher_Type vt ON vt.Vocher_Type_Id = erg.VoucherId
             WHERE 1 = 1
         `;
 
@@ -705,3 +706,4 @@ export const updateEmployeeReportGroup = async (req, res) => {
         });
     }
 };
+

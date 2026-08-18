@@ -18,11 +18,14 @@ import {
     RecievableReport,
     PayableReport,
     SalesDeliveryCummulativeReport,
-    SalesDeliveryDaywiseReport
+    SalesDeliveryDaywiseReport,
+    OverallStaffBasedCategorywiseReport,
+    getEmployeeReportGroupEmployees,
+    getEmployeeReportEmployeeInvoices
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
-    MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport,updateEmployeeReportGroup,createEmployeeReportGroup,
+    MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport, updateEmployeeReportGroup, createEmployeeReportGroup,
     getEmployeeReportGroups
 } from '../controller/Reports/reportsettings.mjs';
 
@@ -89,6 +92,9 @@ ReportRouter.get('/externalAPI/recievable', RecievableReport);
 ReportRouter.get('/externalAPI/payable', PayableReport);
 ReportRouter.get('/externalAPI/salesDeliveryCummulative', SalesDeliveryCummulativeReport);
 ReportRouter.get('/externalAPI/salesDeliveryDaywise', SalesDeliveryDaywiseReport);
+ReportRouter.get('/externalAPI/overallStaffCategorywise', OverallStaffBasedCategorywiseReport);
+ReportRouter.get('/externalAPI/overallStaffCategorywise/employees', getEmployeeReportGroupEmployees);
+ReportRouter.get('/externalAPI/overallStaffCategorywise/invoices', getEmployeeReportEmployeeInvoices);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
@@ -108,7 +114,7 @@ ReportRouter.get('/storageStock/stockvaluegodown', storageStockReport.getStorage
 
 ReportRouter.put('/settings/updateEmployeeReportGroup', updateEmployeeReportGroup);
 ReportRouter.post('/settings/createEmployeeReportGroup', createEmployeeReportGroup);
-ReportRouter.get('/settings/getEmployeeReportGroups', getEmployeeReportGroups); 
+ReportRouter.get('/settings/getEmployeeReportGroups', getEmployeeReportGroups);
 
 
 
