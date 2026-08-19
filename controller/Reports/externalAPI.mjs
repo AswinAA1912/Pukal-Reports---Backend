@@ -1007,3 +1007,28 @@ export const getEmployeeReportEmployeeInvoices = async (req, res) => {
         servError(error, res);
     }
 };
+
+export const RateMasterAdmin = async (req, res) => {
+    try {
+        const { Todate } = req.query;
+
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Online_Rate_Master_List_Admin  @Todate`);
+
+        const [Data1, Data2] = result.recordsets || [];
+
+        if (!Data1 || Data1.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            Data1, Data2
+        });
+
+    } catch (error) {
+        servError(error, res);
+    }
+}

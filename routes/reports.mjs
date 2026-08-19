@@ -21,7 +21,8 @@ import {
     SalesDeliveryDaywiseReport,
     OverallStaffBasedCategorywiseReport,
     getEmployeeReportGroupEmployees,
-    getEmployeeReportEmployeeInvoices
+    getEmployeeReportEmployeeInvoices,
+    RateMasterAdmin
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -95,6 +96,7 @@ ReportRouter.get('/externalAPI/salesDeliveryDaywise', SalesDeliveryDaywiseReport
 ReportRouter.get('/externalAPI/overallStaffCategorywise', OverallStaffBasedCategorywiseReport);
 ReportRouter.get('/externalAPI/overallStaffCategorywise/employees', getEmployeeReportGroupEmployees);
 ReportRouter.get('/externalAPI/overallStaffCategorywise/invoices', getEmployeeReportEmployeeInvoices);
+ReportRouter.get('/externalAPI/rateMasterAdmin', RateMasterAdmin);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
