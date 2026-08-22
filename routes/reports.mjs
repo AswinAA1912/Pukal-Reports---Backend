@@ -27,7 +27,7 @@ import {
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
     MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport, updateEmployeeReportGroup, createEmployeeReportGroup,
-    getEmployeeReportGroups
+    getEmployeeReportGroups,createSalesStockGodown,getSalesStockGodown,updateSalesStockGodown
 } from '../controller/Reports/reportsettings.mjs';
 
 const ReportRouter = express.Router();
@@ -118,6 +118,11 @@ ReportRouter.put('/settings/updateEmployeeReportGroup', updateEmployeeReportGrou
 ReportRouter.post('/settings/createEmployeeReportGroup', createEmployeeReportGroup);
 ReportRouter.get('/settings/getEmployeeReportGroups', getEmployeeReportGroups);
 
+
+
+ReportRouter.post('/settings/salesstockgodown',createSalesStockGodown)
+ReportRouter.put('/settings/salesstockgodown',updateSalesStockGodown)
+ReportRouter.get('/settings/salesstockgodown',getSalesStockGodown )
 
 
 export default ReportRouter;

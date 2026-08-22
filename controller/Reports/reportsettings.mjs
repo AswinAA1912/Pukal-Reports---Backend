@@ -674,7 +674,6 @@ export const updateEmployeeReportGroup = async (req, res) => {
               AND Overall_GroupId = @overallGroupId
         `);
 
-        // 2. Insert new rows, one per VoucherId
         for (const voucherId of voucherIds) {
             const insertRequest = new sql.Request(transaction);
             insertRequest.input("groupName", sql.NVarChar, groupName);
@@ -707,3 +706,134 @@ export const updateEmployeeReportGroup = async (req, res) => {
     }
 };
 
+
+export const createSalesStockGodown = async (req, res) => {
+    const transaction = new sql.Transaction();
+
+    try {
+        const { salesStockGroup, saleStock, godownIds, createdBy } = req.body;
+
+        if (!salesStockGroup || !saleStock || !Array.isArray(godownIds) || godownIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "salesStockGroup, saleStock and a non-empty godownIds array are required"
+            });
+        }
+
+        await transaction.begin();
+
+        for (const godownId of godownIds) {
+            const insertRequest = new sql.Request(transaction);
+            insertRequest.input("salesStockGroup", sql.NVarChar, salesStockGroup);
+            insertRequest.input("saleStock", sql.NVarChar, saleStock);
+            insertRequest.input("godownId", sql.BigInt, godownId);
+            insertRequest.input("createdBy", sql.BigInt, createdBy || null);
+
+            await insertRequest.query(`
+                INSERT INTO tbl_SalesStockGodown
+                    (SalesStockGroup, SaleStock, Godown_Id, created_by, created_at)
+                VALUES
+                    (@salesStockGroup, @saleStock, @godownId, @createdBy, GETDATE())
+            `);
+        }
+
+        await transaction.commit();
+
+        return res.status(201).json({
+            success: true,
+            message: "Sales stock godown created successfully"
+        });
+
+    } catch (err) {
+        await transaction.rollback();
+        console.error("CREATE SALES STOCK GODOWN ERROR:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Error creating sales stock godown"
+        });
+    }
+};
+
+
+
+export const getSalesStockGodown = async (req, res) => {
+    try {
+        const request = new sql.Request();
+
+        const result = await request.query(`
+             SELECT ssg.*,gm.Godown_Name
+            FROM tbl_SalesStockGodown ssg
+			LEFT JOIN tbl_Godown_Master gm ON gm.Godown_Id=ssg.Godown_Id
+        `);
+
+        return res.json({
+            success: true,
+            data: result.recordset
+        });
+
+    } catch (err) {
+        console.error("GET SALES STOCK GODOWN ERROR:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Error fetching sales stock godown"
+        });
+    }
+};
+
+
+export const updateSalesStockGodown = async (req, res) => {
+    const transaction = new sql.Transaction();
+
+    try {
+        const { salesStockGroup, saleStock, godownIds, createdBy } = req.body;
+
+        if (!salesStockGroup || !saleStock || !Array.isArray(godownIds) || godownIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "salesStockGroup, saleStock and a non-empty godownIds array are required"
+            });
+        }
+
+        await transaction.begin();
+
+        const deleteRequest = new sql.Request(transaction);
+        deleteRequest.input("salesStockGroup", sql.NVarChar, salesStockGroup);
+        deleteRequest.input("saleStock", sql.NVarChar, saleStock);
+
+        await deleteRequest.query(`
+            DELETE FROM tbl_SalesStockGodown
+            WHERE SalesStockGroup = @salesStockGroup
+              AND SaleStock = @saleStock
+        `);
+
+        for (const godownId of godownIds) {
+            const insertRequest = new sql.Request(transaction);
+            insertRequest.input("salesStockGroup", sql.NVarChar, salesStockGroup);
+            insertRequest.input("saleStock", sql.NVarChar, saleStock);
+            insertRequest.input("godownId", sql.BigInt, godownId);
+            insertRequest.input("createdBy", sql.BigInt, createdBy || null);
+
+            await insertRequest.query(`
+                INSERT INTO tbl_SalesStockGodown
+                    (SalesStockGroup, SaleStock, Godown_Id, created_by, created_at)
+                VALUES
+                    (@salesStockGroup, @saleStock, @godownId, @createdBy, GETDATE())
+            `);
+        }
+
+        await transaction.commit();
+
+        return res.json({
+            success: true,
+            message: "Sales stock godown updated successfully"
+        });
+
+    } catch (err) {
+        await transaction.rollback();
+        console.error("UPDATE SALES STOCK GODOWN ERROR:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Error updating sales stock godown"
+        });
+    }
+};
