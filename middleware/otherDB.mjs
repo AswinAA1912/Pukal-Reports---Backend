@@ -348,6 +348,35 @@ const ensureReportTablesExist = async (pool) => {
       END
     `);
 
+    // 6. Check/create tbl_SalesStockGodown (with migration if created_at is bigint)
+    await request.query(`
+      IF OBJECT_ID('tbl_SalesStockGodown') IS NOT NULL
+      BEGIN
+        DECLARE @colType NVARCHAR(50);
+        SELECT @colType = t.name 
+        FROM sys.columns c
+        JOIN sys.types t ON c.user_type_id = t.user_type_id
+        WHERE c.object_id = OBJECT_ID('tbl_SalesStockGodown') AND c.name = 'created_at';
+        
+        IF @colType = 'bigint'
+        BEGIN
+          DROP TABLE tbl_SalesStockGodown;
+        END
+      END
+
+      IF OBJECT_ID('tbl_SalesStockGodown') IS NULL
+      BEGIN
+        CREATE TABLE tbl_SalesStockGodown (
+          Id BIGINT IDENTITY(1,1) PRIMARY KEY,
+          SalesStockGroup NVARCHAR(100) NULL,
+          SaleStock NVARCHAR(100) NULL,
+          Godown_Id BIGINT NULL,
+          created_by BIGINT NULL,
+          created_at DATETIME NULL
+        );
+      END
+    `);
+
   } catch (err) {
     console.error("Failed to ensure report tables exist:", err.message);
   }
