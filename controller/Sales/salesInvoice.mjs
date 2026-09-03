@@ -2739,7 +2739,7 @@ ORDER BY llos.Pro_Id;
             const shouldDownload = download === "true";
             const decodedInvoiceNo = Buffer.from(Do_Inv_No, "base64").toString("utf-8");
             const formattedInvoiceNo = decodedInvoiceNo.replace(/_/g, "/").trim();
-            const companyId = process.env.COMPANY;
+            const companyId = process.env.COMPANY || process.env.SELECTED_COMPANY_ID;
 
             const safeFileName = formattedInvoiceNo.replace(/\//g, "_");
             const pdfFileName = `${safeFileName}.pdf`;

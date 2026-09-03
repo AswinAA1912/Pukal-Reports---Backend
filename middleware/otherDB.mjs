@@ -235,147 +235,186 @@ const ensureReportTablesExist = async (pool) => {
   try {
     const request = new sql.Request(pool);
 
-    // 1. Check/create tbl_ERP_Report
-    await request.query(`
-      IF OBJECT_ID('tbl_ERP_Report') IS NULL
-      BEGIN
-        CREATE TABLE tbl_ERP_Report (
-          Report_Id INT IDENTITY(1,1) PRIMARY KEY,
-          Report_Name NVARCHAR(150) NULL,
-          Parent_Report NVARCHAR(150) NULL,
-          CreatedBy INT NULL,
-          CreatedAt DATETIME NULL
-        );
-        BEGIN TRY
-          SET IDENTITY_INSERT tbl_ERP_Report ON;
-          INSERT INTO tbl_ERP_Report (Report_Id, Report_Name, Parent_Report, CreatedBy, CreatedAt)
-          SELECT Report_Id, Report_Name, Parent_Report, CreatedBy, CreatedAt 
-          FROM [ERP_LIVE_DB_PUKAL_FOODS].[dbo].[tbl_ERP_Report];
-          SET IDENTITY_INSERT tbl_ERP_Report OFF;
-        END TRY
-        BEGIN CATCH
-          -- Fallback if Pukal Foods DB is not available
-          INSERT INTO tbl_ERP_Report (Report_Name, Parent_Report, CreatedBy, CreatedAt)
-          VALUES 
-          ('Ref Broker wise', 'SALES REPORT LOL', 1, GETDATE()),
-          ('Retailer wise', 'SALES REPORT LOL', 1, GETDATE()),
-          ('Beat wise ', 'SALES REPORT LOL', 1, GETDATE()),
-          ('Brand Wise', 'SALES REPORT LOL', 1, GETDATE());
-        END CATCH
-      END
-    `);
-
-    // 2. Check/create tbl_ERP_ReportType
-    await request.query(`
-      IF OBJECT_ID('tbl_ERP_ReportType') IS NULL
-      BEGIN
-        CREATE TABLE tbl_ERP_ReportType (
-          Type_Id INT IDENTITY(1,1) PRIMARY KEY,
-          Report_Id INT NOT NULL,
-          Report_Type NVARCHAR(50) NOT NULL
-        );
-        BEGIN TRY
-          SET IDENTITY_INSERT tbl_ERP_ReportType ON;
-          INSERT INTO tbl_ERP_ReportType (Type_Id, Report_Id, Report_Type)
-          SELECT Type_Id, Report_Id, Report_Type 
-          FROM [ERP_LIVE_DB_PUKAL_FOODS].[dbo].[tbl_ERP_ReportType];
-          SET IDENTITY_INSERT tbl_ERP_ReportType OFF;
-        END TRY
-        BEGIN CATCH
-          -- Fallback if Pukal Foods DB is not available
-          INSERT INTO tbl_ERP_ReportType (Report_Id, Report_Type)
-          VALUES 
-          (1, 'Sales Order'),
-          (2, 'Sales Invoice'),
-          (3, 'Receipt Voucher');
-        END CATCH
-      END
-    `);
-
-    // 3. Check/create tbl_ERP_Report_Fileds
-    await request.query(`
-      IF OBJECT_ID('tbl_ERP_Report_Fileds') IS NULL
-      BEGIN
-        CREATE TABLE tbl_ERP_Report_Fileds (
-          Report_Id INT NULL,
-          Field_Id INT NULL,
-          Field_Name NVARCHAR(150) NULL,
-          Fied_Data NVARCHAR(50) NULL,
-          Enable_By INT NULL,
-          Order_By INT NULL,
-          Group_By INT NULL,
-          Type_Id INT NOT NULL
-        );
-        BEGIN TRY
-          INSERT INTO tbl_ERP_Report_Fileds (Report_Id, Field_Id, Field_Name, Fied_Data, Enable_By, Order_By, Group_By, Type_Id)
-          SELECT Report_Id, Field_Id, Field_Name, Fied_Data, Enable_By, Order_By, Group_By, Type_Id 
-          FROM [ERP_LIVE_DB_PUKAL_FOODS].[dbo].[tbl_ERP_Report_Fileds];
-        END TRY
-        BEGIN CATCH
-          -- Fallback if Pukal Foods DB is not available
-        END CATCH
-      END
-    `);
-
-    // 4. Check/create tbl_Report_OverAll_Group
-    await request.query(`
-      IF OBJECT_ID('tbl_Report_OverAll_Group') IS NULL
-      BEGIN
-        CREATE TABLE tbl_Report_OverAll_Group (
-          Id BIGINT IDENTITY(1,1) PRIMARY KEY,
-          GroupName NVARCHAR(50) NULL,
-          Created_By DATETIME2 NULL
-        );
-        INSERT INTO tbl_Report_OverAll_Group (GroupName)
-        VALUES ('INWARDS'), ('PROCESS'), ('OUTWARDS');
-      END
-    `);
-
-    // 5. Check/create tbl_Repots_EmployeeReport_Group
-    await request.query(`
-      IF OBJECT_ID('tbl_Repots_EmployeeReport_Group') IS NULL
-      BEGIN
-        CREATE TABLE tbl_Repots_EmployeeReport_Group (
-          Id BIGINT IDENTITY(1,1) PRIMARY KEY,
-          Group_Name NVARCHAR(50) NULL,
-          Overall_GroupId BIGINT NULL,
-          VoucherId BIGINT NULL,
-          Created_By BIGINT NULL,
-          Created_At DATETIME NULL,
-          Updated_By BIGINT NULL,
-          Updated_At DATETIME NULL
-        );
-      END
-    `);
-
-    // 6. Check/create tbl_SalesStockGodown (with migration if created_at is bigint)
-    await request.query(`
-      IF OBJECT_ID('tbl_SalesStockGodown') IS NOT NULL
-      BEGIN
-        DECLARE @colType NVARCHAR(50);
-        SELECT @colType = t.name 
-        FROM sys.columns c
-        JOIN sys.types t ON c.user_type_id = t.user_type_id
-        WHERE c.object_id = OBJECT_ID('tbl_SalesStockGodown') AND c.name = 'created_at';
-        
-        IF @colType = 'bigint'
+    // 1. Check/create tbl_reports_userrights
+    try {
+      await request.query(`
+        IF OBJECT_ID('tbl_reports_userrights') IS NULL
         BEGIN
-          DROP TABLE tbl_SalesStockGodown;
+          CREATE TABLE tbl_reports_userrights (
+            user_id INT NOT NULL,
+            menu_id INT NOT NULL
+          );
         END
-      END
+      `);
+    } catch (e) {
+      console.warn("Failed to ensure tbl_reports_userrights:", e.message);
+    }
 
-      IF OBJECT_ID('tbl_SalesStockGodown') IS NULL
-      BEGIN
-        CREATE TABLE tbl_SalesStockGodown (
-          Id BIGINT IDENTITY(1,1) PRIMARY KEY,
-          SalesStockGroup NVARCHAR(100) NULL,
-          SaleStock NVARCHAR(100) NULL,
-          Godown_Id BIGINT NULL,
-          created_by BIGINT NULL,
-          created_at DATETIME NULL
-        );
-      END
-    `);
+    // 2. Check/create tbl_ERP_Report
+    try {
+      await request.query(`
+        IF OBJECT_ID('tbl_ERP_Report') IS NULL
+        BEGIN
+          CREATE TABLE tbl_ERP_Report (
+            Report_Id INT IDENTITY(1,1) PRIMARY KEY,
+            Report_Name NVARCHAR(150) NULL,
+            Parent_Report NVARCHAR(150) NULL,
+            CreatedBy INT NULL,
+            CreatedAt DATETIME NULL
+          );
+          BEGIN TRY
+            SET IDENTITY_INSERT tbl_ERP_Report ON;
+            INSERT INTO tbl_ERP_Report (Report_Id, Report_Name, Parent_Report, CreatedBy, CreatedAt)
+            SELECT Report_Id, Report_Name, Parent_Report, CreatedBy, CreatedAt 
+            FROM [ERP_LIVE_DB_PUKAL_FOODS].[dbo].[tbl_ERP_Report];
+            SET IDENTITY_INSERT tbl_ERP_Report OFF;
+          END TRY
+          BEGIN CATCH
+            -- Fallback if Pukal Foods DB is not available
+            INSERT INTO tbl_ERP_Report (Report_Name, Parent_Report, CreatedBy, CreatedAt)
+            VALUES 
+            ('Ref Broker wise', 'SALES REPORT LOL', 1, GETDATE()),
+            ('Retailer wise', 'SALES REPORT LOL', 1, GETDATE()),
+            ('Beat wise ', 'SALES REPORT LOL', 1, GETDATE()),
+            ('Brand Wise', 'SALES REPORT LOL', 1, GETDATE());
+          END CATCH
+        END
+      `);
+    } catch (e) {
+      console.warn("Failed to ensure tbl_ERP_Report:", e.message);
+    }
+
+    // 3. Check/create tbl_ERP_ReportType
+    try {
+      await request.query(`
+        IF OBJECT_ID('tbl_ERP_ReportType') IS NULL
+        BEGIN
+          CREATE TABLE tbl_ERP_ReportType (
+            Type_Id INT IDENTITY(1,1) PRIMARY KEY,
+            Report_Id INT NOT NULL,
+            Report_Type NVARCHAR(50) NOT NULL
+          );
+          BEGIN TRY
+            SET IDENTITY_INSERT tbl_ERP_ReportType ON;
+            INSERT INTO tbl_ERP_ReportType (Type_Id, Report_Id, Report_Type)
+            SELECT Type_Id, Report_Id, Report_Type 
+            FROM [ERP_LIVE_DB_PUKAL_FOODS].[dbo].[tbl_ERP_ReportType];
+            SET IDENTITY_INSERT tbl_ERP_ReportType OFF;
+          END TRY
+          BEGIN CATCH
+            -- Fallback if Pukal Foods DB is not available
+            INSERT INTO tbl_ERP_ReportType (Report_Id, Report_Type)
+            VALUES 
+            (1, 'Sales Order'),
+            (2, 'Sales Invoice'),
+            (3, 'Receipt Voucher');
+          END CATCH
+        END
+      `);
+    } catch (e) {
+      console.warn("Failed to ensure tbl_ERP_ReportType:", e.message);
+    }
+
+    // 4. Check/create tbl_ERP_Report_Fileds
+    try {
+      await request.query(`
+        IF OBJECT_ID('tbl_ERP_Report_Fileds') IS NULL
+        BEGIN
+          CREATE TABLE tbl_ERP_Report_Fileds (
+            Report_Id INT NULL,
+            Field_Id INT NULL,
+            Field_Name NVARCHAR(150) NULL,
+            Fied_Data NVARCHAR(50) NULL,
+            Enable_By INT NULL,
+            Order_By INT NULL,
+            Group_By INT NULL,
+            Type_Id INT NOT NULL
+          );
+          BEGIN TRY
+            INSERT INTO tbl_ERP_Report_Fileds (Report_Id, Field_Id, Field_Name, Fied_Data, Enable_By, Order_By, Group_By, Type_Id)
+            SELECT Report_Id, Field_Id, Field_Name, Fied_Data, Enable_By, Order_By, Group_By, Type_Id 
+            FROM [ERP_LIVE_DB_PUKAL_FOODS].[dbo].[tbl_ERP_Report_Fileds];
+          END TRY
+          BEGIN CATCH
+            -- Fallback if Pukal Foods DB is not available
+          END CATCH
+        END
+      `);
+    } catch (e) {
+      console.warn("Failed to ensure tbl_ERP_Report_Fileds:", e.message);
+    }
+
+    // 5. Check/create tbl_Report_OverAll_Group
+    try {
+      await request.query(`
+        IF OBJECT_ID('tbl_Report_OverAll_Group') IS NULL
+        BEGIN
+          CREATE TABLE tbl_Report_OverAll_Group (
+            Id BIGINT IDENTITY(1,1) PRIMARY KEY,
+            GroupName NVARCHAR(50) NULL,
+            Created_By DATETIME2 NULL
+          );
+          INSERT INTO tbl_Report_OverAll_Group (GroupName)
+          VALUES ('INWARDS'), ('PROCESS'), ('OUTWARDS');
+        END
+      `);
+    } catch (e) {
+      console.warn("Failed to ensure tbl_Report_OverAll_Group:", e.message);
+    }
+
+    // 6. Check/create tbl_Repots_EmployeeReport_Group
+    try {
+      await request.query(`
+        IF OBJECT_ID('tbl_Repots_EmployeeReport_Group') IS NULL
+        BEGIN
+          CREATE TABLE tbl_Repots_EmployeeReport_Group (
+            Id BIGINT IDENTITY(1,1) PRIMARY KEY,
+            Group_Name NVARCHAR(50) NULL,
+            Overall_GroupId BIGINT NULL,
+            VoucherId BIGINT NULL,
+            Created_By BIGINT NULL,
+            Created_At DATETIME NULL,
+            Updated_By BIGINT NULL,
+            Updated_At DATETIME NULL
+          );
+        END
+      `);
+    } catch (e) {
+      console.warn("Failed to ensure tbl_Repots_EmployeeReport_Group:", e.message);
+    }
+
+    // 7. Check/create tbl_SalesStockGodown (with migration if created_at is bigint)
+    try {
+      await request.query(`
+        IF OBJECT_ID('tbl_SalesStockGodown') IS NOT NULL
+        BEGIN
+          DECLARE @colType NVARCHAR(50);
+          SELECT @colType = t.name 
+          FROM sys.columns c
+          JOIN sys.types t ON c.user_type_id = t.user_type_id
+          WHERE c.object_id = OBJECT_ID('tbl_SalesStockGodown') AND c.name = 'created_at';
+          
+          IF @colType = 'bigint'
+          BEGIN
+            DROP TABLE tbl_SalesStockGodown;
+          END
+        END
+
+        IF OBJECT_ID('tbl_SalesStockGodown') IS NULL
+        BEGIN
+          CREATE TABLE tbl_SalesStockGodown (
+            Id BIGINT IDENTITY(1,1) PRIMARY KEY,
+            SalesStockGroup NVARCHAR(100) NULL,
+            SaleStock NVARCHAR(100) NULL,
+            Godown_Id BIGINT NULL,
+            created_by BIGINT NULL,
+            created_at DATETIME NULL
+          );
+        END
+      `);
+    } catch (e) {
+      console.warn("Failed to ensure tbl_SalesStockGodown:", e.message);
+    }
 
   } catch (err) {
     console.error("Failed to ensure report tables exist:", err.message);
