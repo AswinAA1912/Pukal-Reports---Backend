@@ -66,7 +66,7 @@ const getCompanyConfigFromEnv = (Db) => {
 
 const dbconnect = async (req, res, next) => {
   // Skip company database connection for portal-only routes
-  if (req.path && (req.path.includes('/userPortal/') || req.path.includes('/menuMaster'))) {
+  if (req.path && req.path.includes('/userPortal/')) {
     return next();
   }
 

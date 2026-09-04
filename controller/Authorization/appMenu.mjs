@@ -233,7 +233,8 @@ const appMenu = () => {
         } = req.body;
 
         try {
-            const result = await new sql.Request(portalPool)
+            const pool = req.db || portalPool;
+            const result = await new sql.Request(pool)
                 .input('name', name)
                 .input('menu_type', menu_type)
                 .input('parent_id', parent_id ? parent_id : null)
@@ -267,7 +268,8 @@ const appMenu = () => {
         } = req.body;
 
         try {
-            const result = await new sql.Request(portalPool)
+            const pool = req.db || portalPool;
+            const result = await new sql.Request(pool)
                 .input('id', id)
                 .input('name', name)
                 .input('menu_type', menu_type)
@@ -307,7 +309,8 @@ const appMenu = () => {
 
     const listMenu = async (req, res) => {
         try {
-            const menuData = await new sql.Request(portalPool).query(`
+            const pool = req.db || portalPool;
+            const menuData = await new sql.Request(pool).query(`
                 SELECT 
                     m.*,
                     COALESCE((

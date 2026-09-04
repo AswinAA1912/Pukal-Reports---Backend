@@ -10,29 +10,60 @@ const ensureTable = async (req) => {
     try {
         const initReq = req?.db ? new sql.Request(req.db) : new sql.Request();
         await initReq.query(`
-            IF OBJECT_ID('tbl_reports_userrights') IS NULL
+            IF OBJECT_ID('tbl_AppMenu_UserRights') IS NULL
             BEGIN
-                CREATE TABLE tbl_reports_userrights (
-                    user_id INT NOT NULL,
-                    menu_id INT NOT NULL,
-                    user_type_id INT NULL
+                CREATE TABLE tbl_AppMenu_UserRights (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    UserId INT NOT NULL,
+                    MenuId INT NOT NULL,
+                    Read_Rights INT DEFAULT 1,
+                    Add_Rights INT DEFAULT 1,
+                    Edit_Rights INT DEFAULT 1,
+                    Delete_Rights INT DEFAULT 1,
+                    Print_Rights INT DEFAULT 1,
+                    EntryAt DATETIME DEFAULT GETDATE()
                 );
             END
-            ELSE IF COL_LENGTH('tbl_reports_userrights', 'user_type_id') IS NULL
+
+            IF OBJECT_ID('tbl_AppMenu_UserTypeRights') IS NULL
             BEGIN
-                ALTER TABLE tbl_reports_userrights ADD user_type_id INT NULL;
+                CREATE TABLE tbl_AppMenu_UserTypeRights (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    UserTypeId INT NOT NULL,
+                    MenuId INT NOT NULL,
+                    Read_Rights INT DEFAULT 1,
+                    Add_Rights INT DEFAULT 1,
+                    Edit_Rights INT DEFAULT 1,
+                    Delete_Rights INT DEFAULT 1,
+                    Print_Rights INT DEFAULT 1,
+                    EntryAt DATETIME DEFAULT GETDATE()
+                );
             END
 
-            IF OBJECT_ID('tbl_reports_usertype_rights') IS NULL
+            -- One-time sync from legacy tbl_reports_userrights if present
+            IF OBJECT_ID('tbl_reports_userrights') IS NOT NULL
             BEGIN
-                CREATE TABLE tbl_reports_usertype_rights (
-                    user_type_id INT NOT NULL,
-                    menu_id INT NOT NULL
+                INSERT INTO tbl_AppMenu_UserRights (UserId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt)
+                SELECT r.user_id, r.menu_id, 1, 1, 1, 1, 1, GETDATE()
+                FROM tbl_reports_userrights r
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM tbl_AppMenu_UserRights u WHERE u.UserId = r.user_id AND u.MenuId = r.menu_id
+                );
+            END
+
+            -- One-time sync from legacy tbl_reports_usertype_rights if present
+            IF OBJECT_ID('tbl_reports_usertype_rights') IS NOT NULL
+            BEGIN
+                INSERT INTO tbl_AppMenu_UserTypeRights (UserTypeId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt)
+                SELECT r.user_type_id, r.menu_id, 1, 1, 1, 1, 1, GETDATE()
+                FROM tbl_reports_usertype_rights r
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM tbl_AppMenu_UserTypeRights u WHERE u.UserTypeId = r.user_type_id AND u.MenuId = r.menu_id
                 );
             END
         `);
     } catch (err) {
-        console.warn('ensureTable tbl_reports_userrights warning:', err.message);
+        console.warn('ensureTable tbl_AppMenu_UserRights warning:', err.message);
     }
 };
 
@@ -55,52 +86,51 @@ const reportsUserRights = () => {
                 const utReq = (req.db ? new sql.Request(req.db) : new sql.Request())
                     .input('user_type_id', utId);
 
-                // 1. Check tbl_reports_usertype_rights first
+                // 1. Check tbl_AppMenu_UserTypeRights first
                 let utResult = await utReq.query(`
                     SELECT 
-                        utr.user_type_id,
-                        utr.menu_id,
+                        utr.UserTypeId AS user_type_id,
+                        utr.UserTypeId,
+                        utr.MenuId AS menu_id,
+                        utr.MenuId,
+                        COALESCE(utr.Read_Rights, 1) AS Read_Rights,
+                        COALESCE(utr.Add_Rights, 1) AS Add_Rights,
+                        COALESCE(utr.Edit_Rights, 1) AS Edit_Rights,
+                        COALESCE(utr.Delete_Rights, 1) AS Delete_Rights,
+                        COALESCE(utr.Print_Rights, 1) AS Print_Rights,
                         m.name AS MenuName,
                         m.menu_type,
                         m.url,
                         m.parent_id
-                    FROM tbl_reports_usertype_rights utr
-                    LEFT JOIN [${userPortalDB}].[dbo].[tbl_AppMenu] m ON m.id = utr.menu_id
-                    WHERE utr.user_type_id = @user_type_id
+                    FROM tbl_AppMenu_UserTypeRights utr
+                    LEFT JOIN [${userPortalDB}].[dbo].[tbl_AppMenu] m ON m.id = utr.MenuId
+                    WHERE utr.UserTypeId = @user_type_id
+                      AND (utr.Read_Rights = 1 OR utr.Read_Rights IS NULL)
                     ORDER BY m.name
                 `);
 
-                // 2. Fallback: check tbl_reports_userrights by user_type_id
-                if (!utResult.recordset || utResult.recordset.length === 0) {
-                    utResult = await utReq.query(`
-                        SELECT DISTINCT
-                            ur.user_type_id,
-                            ur.menu_id,
-                            m.name AS MenuName,
-                            m.menu_type,
-                            m.url,
-                            m.parent_id
-                        FROM tbl_reports_userrights ur
-                        LEFT JOIN [${userPortalDB}].[dbo].[tbl_AppMenu] m ON m.id = ur.menu_id
-                        WHERE ur.user_type_id = @user_type_id
-                        ORDER BY m.name
-                    `);
-                }
-
-                // 3. Fallback: check tbl_reports_userrights joined with tbl_Users
+                // 2. Fallback: check tbl_AppMenu_UserRights joined with tbl_Users
                 if (!utResult.recordset || utResult.recordset.length === 0) {
                     utResult = await utReq.query(`
                         SELECT DISTINCT
                             @user_type_id AS user_type_id,
-                            ur.menu_id,
+                            @user_type_id AS UserTypeId,
+                            ur.MenuId AS menu_id,
+                            ur.MenuId,
+                            1 AS Read_Rights,
+                            1 AS Add_Rights,
+                            1 AS Edit_Rights,
+                            1 AS Delete_Rights,
+                            1 AS Print_Rights,
                             m.name AS MenuName,
                             m.menu_type,
                             m.url,
                             m.parent_id
-                        FROM tbl_reports_userrights ur
-                        INNER JOIN tbl_Users u ON u.UserId = ur.user_id
-                        LEFT JOIN [${userPortalDB}].[dbo].[tbl_AppMenu] m ON m.id = ur.menu_id
+                        FROM tbl_AppMenu_UserRights ur
+                        INNER JOIN tbl_Users u ON u.UserId = ur.UserId
+                        LEFT JOIN [${userPortalDB}].[dbo].[tbl_AppMenu] m ON m.id = ur.MenuId
                         WHERE u.UserTypeId = @user_type_id
+                          AND (ur.Read_Rights = 1 OR ur.Read_Rights IS NULL)
                         ORDER BY m.name
                     `);
                 }
@@ -127,29 +157,38 @@ const reportsUserRights = () => {
 
             const queryStr = `
                 SELECT 
-                    ur.user_id,
-                    ur.menu_id,
-                    ISNULL(ur.user_type_id, u.UserTypeId) AS user_type_id,
+                    ur.UserId AS user_id,
+                    ur.UserId,
+                    ur.MenuId AS menu_id,
+                    ur.MenuId,
+                    ISNULL(u.UserTypeId, 0) AS user_type_id,
+                    ISNULL(u.UserTypeId, 0) AS UserTypeId,
                     u.Name AS UserName,
                     u.UserName AS UserLoginName,
                     m.name AS MenuName,
                     m.menu_type,
                     m.url,
-                    m.parent_id
-                FROM tbl_reports_userrights ur
-                LEFT JOIN tbl_Users u ON u.UserId = ur.user_id
-                LEFT JOIN [${userPortalDB}].[dbo].[tbl_AppMenu] m ON m.id = ur.menu_id
+                    m.parent_id,
+                    COALESCE(ur.Read_Rights, 1) AS Read_Rights,
+                    COALESCE(ur.Add_Rights, 1) AS Add_Rights,
+                    COALESCE(ur.Edit_Rights, 1) AS Edit_Rights,
+                    COALESCE(ur.Delete_Rights, 1) AS Delete_Rights,
+                    COALESCE(ur.Print_Rights, 1) AS Print_Rights
+                FROM tbl_AppMenu_UserRights ur
+                LEFT JOIN tbl_Users u ON u.UserId = ur.UserId
+                LEFT JOIN [${userPortalDB}].[dbo].[tbl_AppMenu] m ON m.id = ur.MenuId
                 WHERE 1 = 1
-                ${uId !== null ? ' AND ur.user_id = @user_id ' : ''}
-                ${mId !== null ? ' AND ur.menu_id = @menu_id ' : ''}
-                ${utId !== null ? ' AND (ur.user_type_id = @user_type_id OR u.UserTypeId = @user_type_id) ' : ''}
+                  AND (ur.Read_Rights = 1 OR ur.Read_Rights IS NULL)
+                ${uId !== null ? ' AND ur.UserId = @user_id ' : ''}
+                ${mId !== null ? ' AND ur.MenuId = @menu_id ' : ''}
+                ${utId !== null ? ' AND u.UserTypeId = @user_type_id ' : ''}
                 ORDER BY u.Name, m.name
             `;
 
             let result = await request.query(queryStr);
 
             // AUTO-INHERIT FOR NEW USERS:
-            // If querying a user and no rights found in tbl_reports_userrights yet:
+            // If querying a user and no rights found in tbl_AppMenu_UserRights yet:
             if (uId !== null && (!result.recordset || result.recordset.length === 0)) {
                 const userReq = (req.db ? new sql.Request(req.db) : new sql.Request())
                     .input('user_id', uId);
@@ -165,26 +204,26 @@ const reportsUserRights = () => {
                         .input('user_type_id', assignedUserTypeId);
 
                     await autoAssignReq.query(`
-                        -- 1. Try copying from tbl_reports_usertype_rights
-                        IF EXISTS (SELECT 1 FROM tbl_reports_usertype_rights WHERE user_type_id = @user_type_id)
+                        -- 1. Try copying from tbl_AppMenu_UserTypeRights
+                        IF EXISTS (SELECT 1 FROM tbl_AppMenu_UserTypeRights WHERE UserTypeId = @user_type_id AND (Read_Rights = 1 OR Read_Rights IS NULL))
                         BEGIN
-                            INSERT INTO tbl_reports_userrights (user_id, menu_id, user_type_id)
-                            SELECT @target_user_id, menu_id, @user_type_id
-                            FROM tbl_reports_usertype_rights
-                            WHERE user_type_id = @user_type_id;
+                            INSERT INTO tbl_AppMenu_UserRights (UserId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt)
+                            SELECT @target_user_id, MenuId, ISNULL(Read_Rights, 1), ISNULL(Add_Rights, 1), ISNULL(Edit_Rights, 1), ISNULL(Delete_Rights, 1), ISNULL(Print_Rights, 1), GETDATE()
+                            FROM tbl_AppMenu_UserTypeRights
+                            WHERE UserTypeId = @user_type_id AND (Read_Rights = 1 OR Read_Rights IS NULL);
                         END
                         -- 2. Fallback: copy from existing users of this UserType
                         ELSE IF EXISTS (
-                            SELECT 1 FROM tbl_reports_userrights ur 
-                            INNER JOIN tbl_Users u ON u.UserId = ur.user_id 
-                            WHERE u.UserTypeId = @user_type_id OR ur.user_type_id = @user_type_id
+                            SELECT 1 FROM tbl_AppMenu_UserRights ur 
+                            INNER JOIN tbl_Users u ON u.UserId = ur.UserId 
+                            WHERE u.UserTypeId = @user_type_id AND (ur.Read_Rights = 1 OR ur.Read_Rights IS NULL)
                         )
                         BEGIN
-                            INSERT INTO tbl_reports_userrights (user_id, menu_id, user_type_id)
-                            SELECT DISTINCT @target_user_id, ur.menu_id, @user_type_id
-                            FROM tbl_reports_userrights ur
-                            INNER JOIN tbl_Users u ON u.UserId = ur.user_id
-                            WHERE u.UserTypeId = @user_type_id OR ur.user_type_id = @user_type_id;
+                            INSERT INTO tbl_AppMenu_UserRights (UserId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt)
+                            SELECT DISTINCT @target_user_id, ur.MenuId, 1, 1, 1, 1, 1, GETDATE()
+                            FROM tbl_AppMenu_UserRights ur
+                            INNER JOIN tbl_Users u ON u.UserId = ur.UserId
+                            WHERE u.UserTypeId = @user_type_id AND (ur.Read_Rights = 1 OR ur.Read_Rights IS NULL);
                         END
                     `);
 
@@ -207,54 +246,74 @@ const reportsUserRights = () => {
     const createReportsUserRights = async (req, res) => {
         const { user_id, menu_id, menu_ids, user_type_id } = req.body;
 
-        if (!checkIsNumber(user_id)) {
-            return invalidInput(res, 'Valid user_id is required');
+        const hasUserId = checkIsNumber(user_id);
+        const hasUserTypeId = checkIsNumber(user_type_id);
+
+        if (!hasUserId && !hasUserTypeId) {
+            return invalidInput(res, 'Valid user_id or user_type_id is required');
         }
 
         await ensureTable(req);
 
-        const uId = Number(user_id);
+        const targetMenuIds = Array.isArray(menu_ids)
+            ? menu_ids.map(Number).filter(id => !isNaN(id))
+            : (checkIsNumber(menu_id) ? [Number(menu_id)] : []);
+
+        if (targetMenuIds.length === 0) {
+            return invalidInput(res, 'menu_id or menu_ids array is required');
+        }
+
         const transaction = new sql.Transaction(req.db || undefined);
 
         try {
             await transaction.begin();
 
-            let resolvedUserTypeId = checkIsNumber(user_type_id) ? Number(user_type_id) : null;
-            if (resolvedUserTypeId === null) {
-                const uReq = new sql.Request(transaction).input('u_id', uId);
-                const uRes = await uReq.query('SELECT UserTypeId FROM tbl_Users WHERE UserId = @u_id');
-                if (uRes.recordset?.length > 0 && uRes.recordset[0].UserTypeId) {
-                    resolvedUserTypeId = Number(uRes.recordset[0].UserTypeId);
+            if (hasUserId) {
+                const uId = Number(user_id);
+                for (const mId of targetMenuIds) {
+                    const reqUpsert = new sql.Request(transaction)
+                        .input('user_id', uId)
+                        .input('menu_id', mId);
+
+                    await reqUpsert.query(`
+                        IF NOT EXISTS (SELECT 1 FROM tbl_AppMenu_UserRights WHERE UserId = @user_id AND MenuId = @menu_id)
+                        BEGIN
+                            INSERT INTO tbl_AppMenu_UserRights 
+                                (UserId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt)
+                            VALUES 
+                                (@user_id, @menu_id, 1, 1, 1, 1, 1, GETDATE());
+                        END
+                        ELSE
+                        BEGIN
+                            UPDATE tbl_AppMenu_UserRights 
+                            SET Read_Rights = 1, Add_Rights = 1, Edit_Rights = 1, Delete_Rights = 1, Print_Rights = 1, EntryAt = GETDATE()
+                            WHERE UserId = @user_id AND MenuId = @menu_id;
+                        END
+                    `);
                 }
-            }
+            } else if (hasUserTypeId) {
+                const utId = Number(user_type_id);
+                for (const mId of targetMenuIds) {
+                    const reqUpsert = new sql.Request(transaction)
+                        .input('user_type_id', utId)
+                        .input('menu_id', mId);
 
-            const targetMenuIds = Array.isArray(menu_ids)
-                ? menu_ids.map(Number).filter(id => !isNaN(id))
-                : (checkIsNumber(menu_id) ? [Number(menu_id)] : []);
-
-            if (targetMenuIds.length === 0) {
-                await transaction.rollback();
-                return invalidInput(res, 'menu_id or menu_ids array is required');
-            }
-
-            for (const mId of targetMenuIds) {
-                const reqInsert = new sql.Request(transaction)
-                    .input('user_id', uId)
-                    .input('menu_id', mId)
-                    .input('user_type_id', resolvedUserTypeId);
-
-                await reqInsert.query(`
-                    IF NOT EXISTS (SELECT 1 FROM tbl_reports_userrights WHERE user_id = @user_id AND menu_id = @menu_id)
-                    BEGIN
-                        INSERT INTO tbl_reports_userrights (user_id, menu_id, user_type_id) VALUES (@user_id, @menu_id, @user_type_id);
-                    END
-                    ELSE
-                    BEGIN
-                        UPDATE tbl_reports_userrights 
-                        SET user_type_id = @user_type_id 
-                        WHERE user_id = @user_id AND menu_id = @menu_id;
-                    END
-                `);
+                    await reqUpsert.query(`
+                        IF NOT EXISTS (SELECT 1 FROM tbl_AppMenu_UserTypeRights WHERE UserTypeId = @user_type_id AND MenuId = @menu_id)
+                        BEGIN
+                            INSERT INTO tbl_AppMenu_UserTypeRights 
+                                (UserTypeId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt)
+                            VALUES 
+                                (@user_type_id, @menu_id, 1, 1, 1, 1, 1, GETDATE());
+                        END
+                        ELSE
+                        BEGIN
+                            UPDATE tbl_AppMenu_UserTypeRights 
+                            SET Read_Rights = 1, Add_Rights = 1, Edit_Rights = 1, Delete_Rights = 1, Print_Rights = 1, EntryAt = GETDATE()
+                            WHERE UserTypeId = @user_type_id AND MenuId = @menu_id;
+                        END
+                    `);
+                }
             }
 
             await transaction.commit();
@@ -293,19 +352,25 @@ const reportsUserRights = () => {
         try {
             await transaction.begin();
 
-            // 1. If user_type_id is provided, save to tbl_reports_usertype_rights AND update users
+            // 1. If user_type_id is provided, save to tbl_AppMenu_UserTypeRights AND update users
             if (hasUserTypeId) {
                 const utId = Number(user_type_id);
 
-                // Update tbl_reports_usertype_rights
+                // Delete old rights from tbl_AppMenu_UserTypeRights
                 const deleteUtReq = new sql.Request(transaction).input('user_type_id', utId);
-                await deleteUtReq.query('DELETE FROM tbl_reports_usertype_rights WHERE user_type_id = @user_type_id');
+                await deleteUtReq.query('DELETE FROM tbl_AppMenu_UserTypeRights WHERE UserTypeId = @user_type_id');
 
+                // Insert new rights into tbl_AppMenu_UserTypeRights
                 for (const mId of targetMenuIds) {
                     const insertUtReq = new sql.Request(transaction)
                         .input('user_type_id', utId)
                         .input('menu_id', mId);
-                    await insertUtReq.query('INSERT INTO tbl_reports_usertype_rights (user_type_id, menu_id) VALUES (@user_type_id, @menu_id)');
+                    await insertUtReq.query(`
+                        INSERT INTO tbl_AppMenu_UserTypeRights 
+                            (UserTypeId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt) 
+                        VALUES 
+                            (@user_type_id, @menu_id, 1, 1, 1, 1, 1, GETDATE())
+                    `);
                 }
 
                 // If user_ids array is explicitly passed (e.g. from UI Collective Mode selection):
@@ -313,56 +378,55 @@ const reportsUserRights = () => {
                     const targetUserIds = user_ids.map(Number).filter(id => !isNaN(id));
                     for (const uId of targetUserIds) {
                         const delUserReq = new sql.Request(transaction).input('u_id', uId);
-                        await delUserReq.query('DELETE FROM tbl_reports_userrights WHERE user_id = @u_id');
+                        await delUserReq.query('DELETE FROM tbl_AppMenu_UserRights WHERE UserId = @u_id');
 
                         for (const mId of targetMenuIds) {
                             const insUserReq = new sql.Request(transaction)
                                 .input('user_id', uId)
-                                .input('menu_id', mId)
-                                .input('user_type_id', utId);
-                            await insUserReq.query('INSERT INTO tbl_reports_userrights (user_id, menu_id, user_type_id) VALUES (@user_id, @menu_id, @user_type_id)');
+                                .input('menu_id', mId);
+                            await insUserReq.query(`
+                                INSERT INTO tbl_AppMenu_UserRights 
+                                    (UserId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt) 
+                                VALUES 
+                                    (@user_id, @menu_id, 1, 1, 1, 1, 1, GETDATE())
+                            `);
                         }
                     }
                 } else if (!hasUserId) {
-                    // Update all current users matching this user_type_id in tbl_reports_userrights
+                    // Update all current users matching this user_type_id in tbl_AppMenu_UserRights
                     const updateAllReq = new sql.Request(transaction).input('user_type_id', utId);
                     await updateAllReq.query(`
                         DELETE ur
-                        FROM tbl_reports_userrights ur
-                        INNER JOIN tbl_Users u ON u.UserId = ur.user_id
-                        WHERE u.UserTypeId = @user_type_id OR ur.user_type_id = @user_type_id;
+                        FROM tbl_AppMenu_UserRights ur
+                        INNER JOIN tbl_Users u ON u.UserId = ur.UserId
+                        WHERE u.UserTypeId = @user_type_id;
 
-                        INSERT INTO tbl_reports_userrights (user_id, menu_id, user_type_id)
-                        SELECT u.UserId, utr.menu_id, @user_type_id
+                        INSERT INTO tbl_AppMenu_UserRights (UserId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt)
+                        SELECT u.UserId, utr.MenuId, 1, 1, 1, 1, 1, GETDATE()
                         FROM tbl_Users u
-                        CROSS JOIN tbl_reports_usertype_rights utr
-                        WHERE u.UserTypeId = @user_type_id AND utr.user_type_id = @user_type_id AND u.UDel_Flag = 0;
+                        CROSS JOIN tbl_AppMenu_UserTypeRights utr
+                        WHERE u.UserTypeId = @user_type_id AND utr.UserTypeId = @user_type_id AND u.UDel_Flag = 0;
                     `);
                 }
             }
 
-            // 2. If specific user_id is provided, update that user's rights
+            // 2. If specific user_id is provided, update that user's rights in tbl_AppMenu_UserRights
             if (hasUserId) {
                 const uId = Number(user_id);
-                let resolvedUserTypeId = hasUserTypeId ? Number(user_type_id) : null;
-
-                if (resolvedUserTypeId === null) {
-                    const uReq = new sql.Request(transaction).input('u_id', uId);
-                    const uRes = await uReq.query('SELECT UserTypeId FROM tbl_Users WHERE UserId = @u_id');
-                    if (uRes.recordset?.length > 0 && uRes.recordset[0].UserTypeId) {
-                        resolvedUserTypeId = Number(uRes.recordset[0].UserTypeId);
-                    }
-                }
 
                 const deleteReq = new sql.Request(transaction).input('user_id', uId);
-                await deleteReq.query('DELETE FROM tbl_reports_userrights WHERE user_id = @user_id');
+                await deleteReq.query('DELETE FROM tbl_AppMenu_UserRights WHERE UserId = @user_id');
 
                 for (const mId of targetMenuIds) {
                     const insertReq = new sql.Request(transaction)
                         .input('user_id', uId)
-                        .input('menu_id', mId)
-                        .input('user_type_id', resolvedUserTypeId);
-                    await insertReq.query('INSERT INTO tbl_reports_userrights (user_id, menu_id, user_type_id) VALUES (@user_id, @menu_id, @user_type_id)');
+                        .input('menu_id', mId);
+                    await insertReq.query(`
+                        INSERT INTO tbl_AppMenu_UserRights 
+                            (UserId, MenuId, Read_Rights, Add_Rights, Edit_Rights, Delete_Rights, Print_Rights, EntryAt) 
+                        VALUES 
+                            (@user_id, @menu_id, 1, 1, 1, 1, 1, GETDATE())
+                    `);
                 }
             }
 
@@ -402,9 +466,9 @@ const reportsUserRights = () => {
                 request.input('user_id', Number(user_id));
                 if (mId !== null) {
                     request.input('menu_id', mId);
-                    await request.query('DELETE FROM tbl_reports_userrights WHERE user_id = @user_id AND menu_id = @menu_id');
+                    await request.query('DELETE FROM tbl_AppMenu_UserRights WHERE UserId = @user_id AND MenuId = @menu_id');
                 } else {
-                    await request.query('DELETE FROM tbl_reports_userrights WHERE user_id = @user_id');
+                    await request.query('DELETE FROM tbl_AppMenu_UserRights WHERE UserId = @user_id');
                 }
             } else if (hasUserTypeId) {
                 const utId = Number(user_type_id);
@@ -412,13 +476,19 @@ const reportsUserRights = () => {
                 if (mId !== null) {
                     request.input('menu_id', mId);
                     await request.query(`
-                        DELETE FROM tbl_reports_usertype_rights WHERE user_type_id = @user_type_id AND menu_id = @menu_id;
-                        DELETE FROM tbl_reports_userrights WHERE user_type_id = @user_type_id AND menu_id = @menu_id;
+                        DELETE FROM tbl_AppMenu_UserTypeRights WHERE UserTypeId = @user_type_id AND MenuId = @menu_id;
+                        DELETE ur 
+                        FROM tbl_AppMenu_UserRights ur
+                        INNER JOIN tbl_Users u ON u.UserId = ur.UserId
+                        WHERE u.UserTypeId = @user_type_id AND ur.MenuId = @menu_id;
                     `);
                 } else {
                     await request.query(`
-                        DELETE FROM tbl_reports_usertype_rights WHERE user_type_id = @user_type_id;
-                        DELETE FROM tbl_reports_userrights WHERE user_type_id = @user_type_id;
+                        DELETE FROM tbl_AppMenu_UserTypeRights WHERE UserTypeId = @user_type_id;
+                        DELETE ur 
+                        FROM tbl_AppMenu_UserRights ur
+                        INNER JOIN tbl_Users u ON u.UserId = ur.UserId
+                        WHERE u.UserTypeId = @user_type_id;
                     `);
                 }
             }
