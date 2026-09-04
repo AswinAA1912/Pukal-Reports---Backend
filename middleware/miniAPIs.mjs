@@ -57,6 +57,12 @@ export const getUserTypeByAuth = async (Auth) => {
         `);
 
         if (portalResult.recordset.length === 0) {
+            try {
+                const localUser = (await new sql.Request()
+                    .input('auth', Auth)
+                    .query(`SELECT ut.Id FROM tbl_Users u JOIN tbl_User_Type ut ON ut.Id = u.UserTypeId WHERE u.Autheticate_Id = @auth AND u.UDel_Flag = 0`)).recordset;
+                if (localUser.length > 0) return Number(localUser[0].Id);
+            } catch (_) {}
             return false;
         }
 
@@ -66,13 +72,14 @@ export const getUserTypeByAuth = async (Auth) => {
         const userTypeDetails = (
             await new sql.Request()
                 .input('globalUserId', globalUserId)
+                .input('auth', Auth)
                 .query(`
                 SELECT ut.Id
                 FROM 
                     tbl_Users AS u,
                     tbl_User_Type AS ut
                 WHERE 
-                    u.Global_User_ID = @globalUserId
+                    (u.Global_User_ID = @globalUserId OR u.Autheticate_Id = @auth)
                     AND
                     u.UserTypeId = ut.Id
                     AND
@@ -138,6 +145,12 @@ export const getUserIdByAuth = async (Auth) => {
         `);
 
         if (portalResult.recordset.length === 0) {
+            try {
+                const localUser = (await new sql.Request()
+                    .input('auth', Auth)
+                    .query(`SELECT UserId FROM tbl_Users WHERE Autheticate_Id = @auth AND UDel_Flag = 0`)).recordset;
+                if (localUser.length > 0) return Number(localUser[0].UserId);
+            } catch (_) {}
             return false;
         }
 
@@ -146,13 +159,14 @@ export const getUserIdByAuth = async (Auth) => {
         // 2. Query target company database for UserId
         const getUserId = (await new sql.Request()
             .input('globalUserId', globalUserId)
+            .input('auth', Auth)
             .query(`
             SELECT 
                 UserId
             FROM 
                 tbl_Users
             WHERE 
-                Global_User_ID = @globalUserId AND UDel_Flag = 0
+                (Global_User_ID = @globalUserId OR Autheticate_Id = @auth) AND UDel_Flag = 0
             `)
         ).recordset;
 

@@ -65,8 +65,8 @@ const getCompanyConfigFromEnv = (Db) => {
 };
 
 const dbconnect = async (req, res, next) => {
-  // Skip company database connection for portal-only routes unless SELECTED_COMPANY_ID is set
-  if (req.path && (req.path.includes('/userPortal/') || req.path.includes('/menuMaster')) && !process.env.SELECTED_COMPANY_ID) {
+  // Skip company database connection for portal-only routes
+  if (req.path && (req.path.includes('/userPortal/') || req.path.includes('/menuMaster'))) {
     return next();
   }
 
@@ -242,12 +242,25 @@ const ensureReportTablesExist = async (pool) => {
         BEGIN
           CREATE TABLE tbl_reports_userrights (
             user_id INT NOT NULL,
+            menu_id INT NOT NULL,
+            user_type_id INT NULL
+          );
+        END
+        ELSE IF COL_LENGTH('tbl_reports_userrights', 'user_type_id') IS NULL
+        BEGIN
+          ALTER TABLE tbl_reports_userrights ADD user_type_id INT NULL;
+        END
+
+        IF OBJECT_ID('tbl_reports_usertype_rights') IS NULL
+        BEGIN
+          CREATE TABLE tbl_reports_usertype_rights (
+            user_type_id INT NOT NULL,
             menu_id INT NOT NULL
           );
         END
       `);
     } catch (e) {
-      console.warn("Failed to ensure tbl_reports_userrights:", e.message);
+      console.warn("Failed to ensure tbl_reports_userrights or tbl_reports_usertype_rights:", e.message);
     }
 
     // 2. Check/create tbl_ERP_Report

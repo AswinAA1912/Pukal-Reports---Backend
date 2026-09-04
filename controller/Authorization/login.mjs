@@ -17,7 +17,7 @@ const LoginController = () => {
         }
 
         try {
-            const result = await new sql.Request()
+            const result = await new sql.Request(portalPool)
                 .input('username', username)
                 .query(`
                     SELECT 
@@ -30,9 +30,11 @@ const LoginController = () => {
                         [${userPortalDB}].[dbo].[tbl_Company] AS c,
                         [${userPortalDB}].[dbo].[tbl_Users] AS u
                     WHERE
-                        u.UserName = @username
+                        LOWER(u.UserName) = LOWER(@username)
                         AND
                         u.Company_Id = c.Local_Comp_Id
+                        AND
+                        u.UDel_Flag = 0
                     `)
 
             if (result.recordset.length > 0) {
@@ -50,7 +52,7 @@ const LoginController = () => {
 
         try {
             const decryptedPassword = decryptPasswordFun(Password);
-            const result = await new sql.Request()
+            const result = await new sql.Request(portalPool)
                 .input('Global_User_ID', Global_User_ID)
                 .input('Password', decryptedPassword)
                 .query(`
@@ -67,6 +69,8 @@ const LoginController = () => {
                         u.Password = @Password
                         AND
                         u.Company_Id = c.Local_Comp_Id
+                        AND
+                        u.UDel_Flag = 0
                     `);
             if (result.recordset.length > 0) {
                 success(res, 'Login successful', result.recordset[0])
@@ -149,7 +153,7 @@ const LoginController = () => {
 
     const getUserByAuth = async (req, res) => {
         const Auth = req.header('Authorization')
-        const Db = req.header('Db') || req.get('Db');
+        const Db = req.header('Db') || req.get('Db') || req.query.company_id || req.query.companyId || req.query.Company_Id || req.query.CompanyId;
 
         try {
             // Attempt direct query on target company DB using Autheticate_Id if database context is established
@@ -181,7 +185,7 @@ const LoginController = () => {
                                 UserId = u.UserId
                             ORDER BY
                                 InTime DESC
-                                FOR JSON PATH
+                            FOR JSON PATH
                         )  AS session
                     FROM tbl_Users AS u
                     LEFT JOIN tbl_Branch_Master AS b ON b.BranchId = u.BranchId
@@ -228,7 +232,7 @@ const LoginController = () => {
                 const targetResult = await targetReq.query(`
                     SELECT Global_User_ID 
                     FROM [${userPortalDB}].[dbo].[tbl_Users] 
-                    WHERE UserName = @username AND Company_Id = @companyId AND UDel_Flag = 0
+                    WHERE LOWER(UserName) = LOWER(@username) AND Company_Id = @companyId AND UDel_Flag = 0
                 `);
                 if (targetResult.recordset.length > 0) {
                     globalUserId = targetResult.recordset[0].Global_User_ID;
@@ -294,7 +298,7 @@ const LoginController = () => {
                         UserId = u.UserId
                     ORDER BY
                         InTime DESC
-                        FOR JSON PATH
+                    FOR JSON PATH
                 )  AS session
 
             FROM tbl_Users AS u
@@ -308,14 +312,28 @@ const LoginController = () => {
             LEFT JOIN tbl_Company_Master AS c
             ON c.Company_id = u.Company_Id
 
-            WHERE u.Global_User_ID = @globalUserId AND UDel_Flag= 0`;
+            WHERE (u.Global_User_ID = @globalUserId OR LOWER(u.UserName) = LOWER(@username)) AND UDel_Flag= 0`;
 
-            const request = new sql.Request();
+            const request = new sql.Request(req.db);
             request.input('globalUserId', globalUserId);
+            request.input('username', UserName);
 
             const result = await request.query(query);
 
             if (result.recordset.length > 0) {
+                // If local Autheticate_Id differs from Auth, sync it in the company DB for fast direct query next time
+                if (result.recordset[0].Autheticate_Id !== Auth) {
+                    try {
+                        const syncReq = new sql.Request(req.db);
+                        syncReq.input('auth', Auth);
+                        syncReq.input('userId', result.recordset[0].UserId);
+                        await syncReq.query(`UPDATE tbl_Users SET Autheticate_Id = @auth WHERE UserId = @userId`);
+                        result.recordset[0].Autheticate_Id = Auth;
+                    } catch (syncErr) {
+                        console.warn("Failed to sync Autheticate_Id to company DB:", syncErr.message);
+                    }
+                }
+
                 result.recordset[0].session = result.recordset[0].session ? JSON.parse(result.recordset[0].session) : [{
                     UserId: result.recordset[0].UserId, SessionId: new Date(), InTime: new Date()
                 }]

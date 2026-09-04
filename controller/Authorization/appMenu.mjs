@@ -2,6 +2,7 @@ import sql from 'mssql';
 import { dataFound, failed, invalidInput, servError, success } from '../../res.mjs';
 import { isEqualNumber, isValidNumber, stringCompare } from '../../helper_functions.mjs';
 import { getUserBasedRights, getUserIdByAuth, getUserMenuRights, getUserTypeBasedRights } from '../../middleware/miniAPIs.mjs';
+import { portalPool } from '../../config/dbconfig.mjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -232,7 +233,7 @@ const appMenu = () => {
         } = req.body;
 
         try {
-            const result = await new sql.Request()
+            const result = await new sql.Request(portalPool)
                 .input('name', name)
                 .input('menu_type', menu_type)
                 .input('parent_id', parent_id ? parent_id : null)
@@ -266,7 +267,7 @@ const appMenu = () => {
         } = req.body;
 
         try {
-            const result = await new sql.Request()
+            const result = await new sql.Request(portalPool)
                 .input('id', id)
                 .input('name', name)
                 .input('menu_type', menu_type)
@@ -306,7 +307,7 @@ const appMenu = () => {
 
     const listMenu = async (req, res) => {
         try {
-            const menuData = await sql.query(`
+            const menuData = await new sql.Request(portalPool).query(`
                 SELECT 
                     m.*,
                     COALESCE((
