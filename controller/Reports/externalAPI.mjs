@@ -1048,3 +1048,47 @@ export const RateMasterAdmin = async (req, res) => {
         servError(error, res);
     }
 }
+
+export const invoicewithitems = async (req, res) => {
+    try {
+        const { Fromdate, Todate, Overall_GroupName, Group_Name, Voucher_Type, Voucher_Type_Id, VoucherId, Emp_Id, Emp_Id_Is_Unassigned } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const isUnassigned = Emp_Id_Is_Unassigned === 'true' || Emp_Id_Is_Unassigned === '1' ? 1 : 0;
+
+        let voucherTypeId = null;
+        const rawVoucher = Voucher_Type_Id || VoucherId || Voucher_Type;
+        if (rawVoucher !== undefined && rawVoucher !== null && rawVoucher !== '') {
+            if (!isNaN(Number(rawVoucher))) {
+                voucherTypeId = Number(rawVoucher);
+            } else {
+                // If passed as string name, resolve ID from tbl_Voucher_Type
+                const vtLookup = await new sql.Request()
+                    .input("voucherName", sql.NVarChar(255), String(rawVoucher).trim())
+                    .query(`SELECT TOP 1 Vocher_Type_Id FROM tbl_Voucher_Type WHERE Voucher_Type = @voucherName`);
+                if (vtLookup.recordset && vtLookup.recordset.length > 0) {
+                    voucherTypeId = Number(vtLookup.recordset[0].Vocher_Type_Id);
+                }
+            }
+        }
+
+        const result = await new sql.Request()
+            .input("FromDate", sql.Date, fromDate)
+            .input("ToDate", sql.Date, toDate)
+            .input("Overall_GroupName", sql.NVarChar(255), Overall_GroupName || null)
+            .input("Group_Name", sql.NVarChar(255), Group_Name || null)
+            .input("Voucher_Type", sql.BigInt, voucherTypeId || null)
+            .input("Emp_Id", sql.Int, Emp_Id ? Number(Emp_Id) : null)
+            .input("Emp_Id_Is_Unassigned", sql.Bit, isUnassigned)
+            .execute("SP_Get_EmployeeReport_EmployeeInvoices_with_ITEM");
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
