@@ -23,7 +23,8 @@ import {
     getEmployeeReportGroupEmployees,
     getEmployeeReportEmployeeInvoices,
     RateMasterAdmin,
-    invoicewithitems
+    invoicewithitems,
+    reportingDetailedList
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -99,6 +100,7 @@ ReportRouter.get('/externalAPI/overallStaffCategorywise/employees', getEmployeeR
 ReportRouter.get('/externalAPI/overallStaffCategorywise/invoices', getEmployeeReportEmployeeInvoices);
 ReportRouter.get('/externalAPI/rateMasterAdmin', RateMasterAdmin);
 ReportRouter.get('/externalAPI/overallStaffCategorywise/invoicewithitems', invoicewithitems);
+ReportRouter.get('/externalAPI/reportingDetailedList', reportingDetailedList);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);

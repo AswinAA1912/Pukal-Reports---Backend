@@ -1,5 +1,5 @@
 import sql from "mssql";
-import { servError, noData, dataFound } from "../../res.mjs";
+import { servError, noData, dataFound, invalidInput } from "../../res.mjs";
 import { ISOString } from "../../helper_functions.mjs";
 
 export const onlineSalesReport = async (req, res) => {
@@ -1088,6 +1088,66 @@ export const invoicewithitems = async (req, res) => {
         if (!recordset.length) return noData(res);
 
         dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const reportingDetailedList = async (req, res) => {
+    try {
+        const rawRefId =
+            req.query.Ref_Id ??
+            req.query.Trans_Id ??
+            req.query.ref_id ??
+            req.query.trans_id ??
+            req.body?.Ref_Id ??
+            req.body?.Trans_Id ??
+            req.body?.ref_id ??
+            req.body?.trans_id;
+
+        const rawTransType =
+            req.query.Trans_Type ??
+            req.query.trans_type ??
+            req.body?.Trans_Type ??
+            req.body?.trans_type;
+
+        const cleanRefId =
+            rawRefId !== undefined && rawRefId !== null
+                ? String(rawRefId).trim().replace(/^["']+|["']+$/g, "").trim()
+                : "";
+
+        if (!cleanRefId || isNaN(Number(cleanRefId))) {
+            return invalidInput(res, "Ref_Id is required and must be a valid number");
+        }
+
+        if (!rawTransType || typeof rawTransType !== "string" || !rawTransType.trim()) {
+            return invalidInput(res, "Trans_Type is required");
+        }
+
+        const Trans_Id = Number(cleanRefId);
+        const Trans_Type = String(rawTransType).trim().replace(/^["']+|["']+$/g, "").trim();
+
+        const request = new sql.Request();
+        request.input("Trans_Id", sql.BigInt, Trans_Id);
+        request.input("Trans_Type", sql.VarChar(50), Trans_Type);
+
+        const result = await request.execute("Reporting_Detailed_List_VW");
+
+        const datasets = result.recordsets || [];
+        const totalRows = datasets.reduce((sum, ds) => sum + (Array.isArray(ds) ? ds.length : 0), 0);
+
+        if (datasets.length === 0 || totalRows === 0) {
+            return noData(res, "No transaction details found for the given Ref_Id and Trans_Type");
+        }
+
+        const [Masters = [], Items = [], CostCenter = [], Expenses = []] = datasets;
+
+        return dataFound(res, {
+            Masters,
+            Items,
+            CostCenter,
+            Expenses
+        }, "Data Found");
     } catch (error) {
         servError(error, res);
     }
