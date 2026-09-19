@@ -738,10 +738,15 @@ export const GodownInstockSummary = async (req, res) => {
             .input("Todate", toDate)
             .query(`EXEC Reporting_Current_Stock_Summarry_Report @Predate, @Fromdate, @Todate`);
 
-        const recordset = result.recordset ?? [];
-        if (!recordset.length) return noData(res);
+        const [Data, OB] = result.recordsets || [];
 
-        dataFound(res, recordset);
+        if (!Data || Data.length === 0) {
+            return noData(res);
+        }
+
+        dataFound(res, {
+            Data, OB,
+        });
     } catch (error) {
         servError(error, res);
     }
