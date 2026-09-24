@@ -1157,3 +1157,122 @@ export const reportingDetailedList = async (req, res) => {
         servError(error, res);
     }
 };
+
+export const godownStockBadge = async (req, res) => {
+    try {
+        const rawFromDate =
+            req.query.Fromdate ??
+            req.query.FromDate ??
+            req.query.fromDate ??
+            req.body?.Fromdate ??
+            req.body?.FromDate ??
+            req.body?.fromDate;
+
+        const rawToDate =
+            req.query.Todate ??
+            req.query.ToDate ??
+            req.query.toDate ??
+            req.body?.Todate ??
+            req.body?.ToDate ??
+            req.body?.toDate;
+
+        const rawGodownId =
+            req.query.godownId ??
+            req.query.Godown_Id ??
+            req.query.godown_id ??
+            req.query.GodownId ??
+            req.body?.godownId ??
+            req.body?.Godown_Id ??
+            req.body?.godown_id;
+
+        const rawProductId =
+            req.query.productId ??
+            req.query.Item_Id ??
+            req.query.itemId ??
+            req.query.item_id ??
+            req.query.ProductId ??
+            req.query.product_id ??
+            req.body?.productId ??
+            req.body?.Item_Id ??
+            req.body?.itemId;
+
+        const normalizeDate = (val) => {
+            if (!val) return ISOString();
+            if (typeof val === "string") {
+                const trimmed = val.trim();
+                const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+                if (match) {
+                    const [, y, m, d] = match;
+                    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+                }
+            }
+            return ISOString(val);
+        };
+
+        const fromDate = normalizeDate(rawFromDate);
+        const toDate = normalizeDate(rawToDate);
+
+        const cleanGodownId =
+            rawGodownId !== undefined && rawGodownId !== null
+                ? String(rawGodownId).trim()
+                : "";
+
+        const cleanProductId =
+            rawProductId !== undefined && rawProductId !== null
+                ? String(rawProductId).trim()
+                : "";
+
+        if (!cleanGodownId || isNaN(Number(cleanGodownId))) {
+            return invalidInput(res, "godownId is required and must be a valid number");
+        }
+
+        if (!cleanProductId || isNaN(Number(cleanProductId))) {
+            return invalidInput(res, "productId is required and must be a valid number");
+        }
+
+        const godownId = Number(cleanGodownId);
+        const productId = Number(cleanProductId);
+
+        const request = new sql.Request();
+        request.input("Fromdate", sql.VarChar(50), fromDate);
+        request.input("Todate", sql.VarChar(50), toDate);
+        request.input("Godown_Id", sql.Int, godownId);
+        request.input("Item_Id", sql.BigInt, productId);
+
+        const result = await request.execute("Godown_Stock_Batch_IN_OUT_Process_Item_wise");
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        return dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const ItemwiseStockBadge = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        if (fromDate > toDate) {
+            return noData(res);
+        }
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Batch_Rpt_Stock_Process @Fromdate, @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+}
+
+

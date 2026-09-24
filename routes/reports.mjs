@@ -24,7 +24,9 @@ import {
     getEmployeeReportEmployeeInvoices,
     RateMasterAdmin,
     invoicewithitems,
-    reportingDetailedList
+    reportingDetailedList,
+    godownStockBadge,
+    ItemwiseStockBadge,
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -101,6 +103,8 @@ ReportRouter.get('/externalAPI/overallStaffCategorywise/invoices', getEmployeeRe
 ReportRouter.get('/externalAPI/rateMasterAdmin', RateMasterAdmin);
 ReportRouter.get('/externalAPI/overallStaffCategorywise/invoicewithitems', invoicewithitems);
 ReportRouter.get('/externalAPI/reportingDetailedList', reportingDetailedList);
+ReportRouter.get('/externalAPI/godownStockBadge', godownStockBadge);
+ReportRouter.get('/externalAPI/itemwiseBadge', ItemwiseStockBadge);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
