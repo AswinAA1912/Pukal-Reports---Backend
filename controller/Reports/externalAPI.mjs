@@ -1273,6 +1273,292 @@ export const ItemwiseStockBadge = async (req, res) => {
     } catch (error) {
         servError(error, res);
     }
-}
+};
+
+export const TransactionBatchStockReportByProId = async (req, res) => {
+    try {
+        const rawFromDate =
+            req.query.Fromdate ??
+            req.query.FromDate ??
+            req.query.fromDate ??
+            req.body?.Fromdate ??
+            req.body?.FromDate ??
+            req.body?.fromDate;
+
+        const rawToDate =
+            req.query.Todate ??
+            req.query.ToDate ??
+            req.query.toDate ??
+            req.body?.Todate ??
+            req.body?.ToDate ??
+            req.body?.toDate;
+
+        const rawProductId =
+            req.query.Product_Id ??
+            req.query.productId ??
+            req.query.ProductId ??
+            req.query.product_id ??
+            req.query.Item_Id ??
+            req.query.itemId ??
+            req.query.item_id ??
+            req.body?.Product_Id ??
+            req.body?.productId ??
+            req.body?.ProductId ??
+            req.body?.product_id ??
+            req.body?.Item_Id ??
+            req.body?.itemId ??
+            req.body?.item_id;
+
+        const rawBatch =
+            req.query.Batch ??
+            req.query.batch ??
+            req.query.Batch_No ??
+            req.query.batch_no ??
+            req.body?.Batch ??
+            req.body?.batch ??
+            req.body?.Batch_No ??
+            req.body?.batch_no;
+
+        const normalizeDate = (val) => {
+            if (!val) return ISOString();
+            if (typeof val === "string") {
+                const trimmed = val.trim();
+                const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+                if (match) {
+                    const [, y, m, d] = match;
+                    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+                }
+            }
+            return ISOString(val);
+        };
+
+        const fromDate = normalizeDate(rawFromDate);
+        const toDate = normalizeDate(rawToDate);
+
+        if (fromDate > toDate) {
+            return noData(res);
+        }
+
+        const cleanProductId =
+            rawProductId !== undefined && rawProductId !== null
+                ? String(rawProductId).trim().replace(/^['"]+|['"]+$/g, "").trim()
+                : "";
+
+        if (!cleanProductId || isNaN(Number(cleanProductId))) {
+            return noData(res);
+        }
+
+        const productId = Number(cleanProductId);
+
+        // Sanitize batch: strip single/double quotes, URL-encoded quotes, and whitespace
+        let cleanBatch =
+            rawBatch !== undefined && rawBatch !== null
+                ? String(rawBatch)
+                    .trim()
+                    .replace(/^['"]+|['"]+$/g, "")
+                    .replace(/^['"]+|['"]+$/g, "")
+                    .trim()
+                : "Primary Batch";
+
+        if (!cleanBatch) {
+            cleanBatch = "Primary Batch";
+        }
+
+        // Handle cases where users enter 'Primary_Batch' or similar with underscores
+        if (cleanBatch.replace(/_/g, " ").toLowerCase() === "primary batch") {
+            cleanBatch = "Primary Batch";
+        }
+
+        const request = new sql.Request();
+        request.input("Fromdate", sql.NVarChar(200), fromDate);
+        request.input("Todate", sql.NVarChar(200), toDate);
+        request.input("Product_Id", sql.Int, productId);
+        request.input("Batch", sql.NVarChar(100), cleanBatch);
+
+        let result = await request.query(
+            `EXEC Transaction_Batch_Stock_Report_vw_By_Pro_Id @Fromdate, @Todate, @Product_Id, @Batch`
+        );
+
+        let recordset = result.recordset ?? [];
+
+        // If no records found and batch has underscores/spaces/plus, try fallback alternative formatting
+        if (!recordset.length && (cleanBatch.includes("_") || cleanBatch.includes("+"))) {
+            const alternativeBatch = cleanBatch.replace(/[_\+]/g, " ").trim();
+            const retryRequest = new sql.Request();
+            retryRequest.input("Fromdate", sql.NVarChar(200), fromDate);
+            retryRequest.input("Todate", sql.NVarChar(200), toDate);
+            retryRequest.input("Product_Id", sql.Int, productId);
+            retryRequest.input("Batch", sql.NVarChar(100), alternativeBatch);
+
+            const retryResult = await retryRequest.query(
+                `EXEC Transaction_Batch_Stock_Report_vw_By_Pro_Id @Fromdate, @Todate, @Product_Id, @Batch`
+            );
+            recordset = retryResult.recordset ?? [];
+        }
+
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const TransactionBatchStockReportByProIdandGodownId = async (req, res) => {
+    try {
+        const rawFromDate =
+            req.query.Fromdate ??
+            req.query.FromDate ??
+            req.query.fromDate ??
+            req.body?.Fromdate ??
+            req.body?.FromDate ??
+            req.body?.fromDate;
+
+        const rawToDate =
+            req.query.Todate ??
+            req.query.ToDate ??
+            req.query.toDate ??
+            req.body?.Todate ??
+            req.body?.ToDate ??
+            req.body?.toDate;
+
+        const rawProductId =
+            req.query.Product_Id ??
+            req.query.productId ??
+            req.query.ProductId ??
+            req.query.product_id ??
+            req.query.Item_Id ??
+            req.query.itemId ??
+            req.query.item_id ??
+            req.body?.Product_Id ??
+            req.body?.productId ??
+            req.body?.ProductId ??
+            req.body?.product_id ??
+            req.body?.Item_Id ??
+            req.body?.itemId ??
+            req.body?.item_id;
+
+        const rawGodownId =
+            req.query.Godown_Id ??
+            req.query.godownId ??
+            req.query.GodownId ??
+            req.query.godown_id ??
+            req.body?.Godown_Id ??
+            req.body?.godownId ??
+            req.body?.GodownId ??
+            req.body?.godown_id;
+
+
+        const rawBatch =
+            req.query.Batch ??
+            req.query.batch ??
+            req.query.Batch_No ??
+            req.query.batch_no ??
+            req.body?.Batch ??
+            req.body?.batch ??
+            req.body?.Batch_No ??
+            req.body?.batch_no;
+
+        const normalizeDate = (val) => {
+            if (!val) return ISOString();
+            if (typeof val === "string") {
+                const trimmed = val.trim();
+                const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+                if (match) {
+                    const [, y, m, d] = match;
+                    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+                }
+            }
+            return ISOString(val);
+        };
+
+        const fromDate = normalizeDate(rawFromDate);
+        const toDate = normalizeDate(rawToDate);
+
+        if (fromDate > toDate) {
+            return noData(res);
+        }
+
+        const cleanProductId =
+            rawProductId !== undefined && rawProductId !== null
+                ? String(rawProductId).trim().replace(/^['"]+|['"]+$/g, "").trim()
+                : "";
+
+        if (!cleanProductId || isNaN(Number(cleanProductId))) {
+            return noData(res);
+        }
+
+        const cleanGodownId =
+            rawGodownId !== undefined && rawGodownId !== null
+                ? String(rawGodownId).trim().replace(/^['"]+|['"]+$/g, "").trim()
+                : "";
+
+        if (!cleanGodownId || isNaN(Number(cleanGodownId))) {
+            return noData(res);
+        }
+
+        const productId = Number(cleanProductId);
+
+        const godownId = Number(cleanGodownId);
+
+        // Sanitize batch: strip single/double quotes, URL-encoded quotes, and whitespace
+        let cleanBatch =
+            rawBatch !== undefined && rawBatch !== null
+                ? String(rawBatch)
+                    .trim()
+                    .replace(/^['"]+|['"]+$/g, "")
+                    .replace(/^['"]+|['"]+$/g, "")
+                    .trim()
+                : "Primary Batch";
+
+        if (!cleanBatch) {
+            cleanBatch = "Primary Batch";
+        }
+
+        // Handle cases where users enter 'Primary_Batch' or similar with underscores
+        if (cleanBatch.replace(/_/g, " ").toLowerCase() === "primary batch") {
+            cleanBatch = "Primary Batch";
+        }
+
+        const request = new sql.Request();
+        request.input("Fromdate", sql.NVarChar(200), fromDate);
+        request.input("Todate", sql.NVarChar(200), toDate);
+        request.input("Product_Id", sql.Int, productId);
+        request.input("Godown_Id", sql.Int, godownId);
+        request.input("Batch", sql.NVarChar(100), cleanBatch);
+
+        let result = await request.query(
+            `EXEC Transaction_Batch_Stock_Report_vw_By_Pro_Id_And_Godown_Id @Fromdate, @Todate, @Product_Id, @Godown_Id, @Batch`
+        );
+
+        let recordset = result.recordset ?? [];
+
+        // If no records found and batch has underscores/spaces/plus, try fallback alternative formatting
+        if (!recordset.length && (cleanBatch.includes("_") || cleanBatch.includes("+"))) {
+            const alternativeBatch = cleanBatch.replace(/[_\+]/g, " ").trim();
+            const retryRequest = new sql.Request();
+            retryRequest.input("Fromdate", sql.NVarChar(200), fromDate);
+            retryRequest.input("Todate", sql.NVarChar(200), toDate);
+            retryRequest.input("Product_Id", sql.Int, productId);
+            retryRequest.input("Godown_Id", sql.Int, godownId);
+            retryRequest.input("Batch", sql.NVarChar(100), alternativeBatch);
+
+            const retryResult = await retryRequest.query(
+                `EXEC Transaction_Batch_Stock_Report_vw_By_Pro_Id_And_Godown_Id @Fromdate, @Todate, @Product_Id, @Godown_Id @Batch`
+            );
+            recordset = retryResult.recordset ?? [];
+        }
+
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+
+
+
 
 

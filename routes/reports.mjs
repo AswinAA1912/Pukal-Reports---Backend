@@ -27,6 +27,8 @@ import {
     reportingDetailedList,
     godownStockBadge,
     ItemwiseStockBadge,
+    TransactionBatchStockReportByProId,
+    TransactionBatchStockReportByProIdandGodownId,
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -105,6 +107,8 @@ ReportRouter.get('/externalAPI/overallStaffCategorywise/invoicewithitems', invoi
 ReportRouter.get('/externalAPI/reportingDetailedList', reportingDetailedList);
 ReportRouter.get('/externalAPI/godownStockBadge', godownStockBadge);
 ReportRouter.get('/externalAPI/itemwiseBadge', ItemwiseStockBadge);
+ReportRouter.get('/externalAPI/transactionBatchStockReportByProId', TransactionBatchStockReportByProId);
+ReportRouter.get('/externalAPI/transactionBatchStockReportByProIdandGodownId', TransactionBatchStockReportByProIdandGodownId);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
