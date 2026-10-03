@@ -1501,7 +1501,6 @@ export const TransactionBatchStockReportByProIdandGodownId = async (req, res) =>
 
         const godownId = Number(cleanGodownId);
 
-        // Sanitize batch: strip single/double quotes, URL-encoded quotes, and whitespace
         let cleanBatch =
             rawBatch !== undefined && rawBatch !== null
                 ? String(rawBatch)

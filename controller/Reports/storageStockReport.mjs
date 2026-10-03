@@ -836,17 +836,7 @@ const getStorageStockGodownWiseMobile = async (req, res) => {
             if (g2.size && (!row[col2] || !g2.has(String(row[col2]).trim()))) return false;
             if (g3.size && (!row[col3] || !g3.has(String(row[col3]).trim()))) return false;
 
-            // Zero filter
-            if (
-                (row.OB_Act_Qty || 0) === 0 &&
-                (row.Pur_Act_Qty || 0) === 0 &&
-                (row.Sal_Act_Qty || 0) === 0 &&
-                (row.OB_Bal_Qty || 0) === 0 &&
-                (row.Pur_Qty || 0) === 0 &&
-                (row.Sal_Qty || 0) === 0 &&
-                (row.Bal_Qty || 0) === 0 &&
-                (row.Bal_Act_Qty || 0) === 0
-            ) return false;
+            // Zero filter removed for frontend Stock Filter support
 
             return true;
         });
@@ -1428,23 +1418,7 @@ const getStorageStockGodownitemWise = async (req, res) => {
 
         // 🔥 SINGLE PASS FILTER (FAST)
         const filteredData = result.recordset.filter(row => {
-
-            // Group filters
-            if (g1.size && (!row[col1] || !g1.has(String(row[col1]).trim()))) return false;
-            if (g2.size && (!row[col2] || !g2.has(String(row[col2]).trim()))) return false;
-            if (g3.size && (!row[col3] || !g3.has(String(row[col3]).trim()))) return false;
-
-            // Zero filter
-            if (
-                (row.OB_Act_Qty || 0) === 0 &&
-                (row.Pur_Act_Qty || 0) === 0 &&
-                (row.Sal_Act_Qty || 0) === 0 &&
-                (row.OB_Bal_Qty || 0) === 0 &&
-                (row.Pur_Qty || 0) === 0 &&
-                (row.Sal_Qty || 0) === 0 &&
-                (row.Bal_Qty || 0) === 0 &&
-                (row.Bal_Act_Qty || 0) === 0
-            ) return false;
+            // Zero filter removed for frontend Stock Filter support
 
             return true;
         });
