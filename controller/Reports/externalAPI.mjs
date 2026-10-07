@@ -225,6 +225,39 @@ export const onlinePurchaseReport = async (req, res) => {
 
 export const onlinePurchaseReportItem = async (req, res) => {
     try {
+        const rawPoId =
+            req.query.Po_Id ??
+            req.query.po_id ??
+            req.query.PoId ??
+            req.query.poid ??
+            req.query.Order_Id ??
+            req.query.order_id ??
+            req.body?.Po_Id ??
+            req.body?.po_id ??
+            req.body?.PoId ??
+            req.body?.poid ??
+            req.body?.Order_Id ??
+            req.body?.order_id;
+
+        const cleanPoId =
+            rawPoId !== undefined && rawPoId !== null
+                ? String(rawPoId).trim().replace(/^["']+|["']+$/g, "").trim()
+                : "";
+
+        if (cleanPoId && !isNaN(Number(cleanPoId))) {
+            const request = new sql.Request();
+            request.input("Po_Id", sql.BigInt, cleanPoId);
+
+            const result = await request.query(
+                `EXEC Reporting_Online_Purchase_Item_VW_By_Order_Id @Po_Id`
+            );
+
+            const recordset = result.recordset ?? [];
+            if (!recordset.length) return noData(res);
+
+            return dataFound(res, recordset);
+        }
+
         const { Fromdate, Todate } = req.query;
 
         const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
@@ -1548,6 +1581,98 @@ export const TransactionBatchStockReportByProIdandGodownId = async (req, res) =>
             recordset = retryResult.recordset ?? [];
         }
 
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const PurchaseOrderTripItemDetails = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Online_Purchase_Order_Trip_Item_VW @Fromdate, @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const onlinePurchaseReportItemByOrderId = async (req, res) => {
+    try {
+        const rawPoId =
+            req.query.Po_Id ??
+            req.query.po_id ??
+            req.query.PoId ??
+            req.query.poid ??
+            req.query.Order_Id ??
+            req.query.order_id ??
+            req.query.OrderId ??
+            req.query.orderId ??
+            req.query.id ??
+            req.query.Id ??
+            req.body?.Po_Id ??
+            req.body?.po_id ??
+            req.body?.PoId ??
+            req.body?.poid ??
+            req.body?.Order_Id ??
+            req.body?.order_id ??
+            req.body?.OrderId ??
+            req.body?.orderId ??
+            req.body?.id ??
+            req.body?.Id ??
+            req.params?.Po_Id ??
+            req.params?.po_id ??
+            req.params?.id;
+
+        const cleanPoId =
+            rawPoId !== undefined && rawPoId !== null
+                ? String(rawPoId).trim().replace(/^["']+|["']+$/g, "").trim()
+                : "";
+
+        if (!cleanPoId || isNaN(Number(cleanPoId))) {
+            return invalidInput(res, "Po_Id is required and must be a valid number");
+        }
+
+        const request = new sql.Request();
+        request.input("Po_Id", sql.BigInt, cleanPoId);
+
+        const result = await request.query(
+            `EXEC Reporting_Online_Purchase_Item_VW_By_Order_Id @Po_Id`
+        );
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const PurchaseOrderPaymentReport = async (req, res) => {
+    try {
+        const { Todate } = req.query;
+
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Todate", toDate)
+            .query(`EXEC Purchase_Invoice_Paid_List @Todate`);
+
+        const recordset = result.recordset ?? [];
         if (!recordset.length) return noData(res);
 
         dataFound(res, recordset);

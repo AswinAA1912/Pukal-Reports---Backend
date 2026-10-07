@@ -29,6 +29,9 @@ import {
     ItemwiseStockBadge,
     TransactionBatchStockReportByProId,
     TransactionBatchStockReportByProIdandGodownId,
+    PurchaseOrderTripItemDetails,
+    onlinePurchaseReportItemByOrderId,
+    PurchaseOrderPaymentReport,
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -67,6 +70,7 @@ ReportRouter.get('/externalAPI/onlineSalesReportItemLOL', onlineSalesReportItemL
 ReportRouter.get('/externalAPI/SalesGraph', SalesGraphCard);
 ReportRouter.get('/externalAPI/onlinePurchaseReport', onlinePurchaseReport);
 ReportRouter.get('/externalAPI/onlinePurchaseReportItem', onlinePurchaseReportItem);
+ReportRouter.get('/externalAPI/onlinePurchaseReportItemByOrderId', onlinePurchaseReportItemByOrderId);
 ReportRouter.get('/externalAPI/PurchaseGraph', PurchaseGraphCard);
 ReportRouter.get('/externalAPI/SaleOrderReport', SaleOrderReport);
 ReportRouter.get('/externalAPI/SaleOrderReportItem', SaleOrderReportItem);
@@ -109,6 +113,8 @@ ReportRouter.get('/externalAPI/godownStockBadge', godownStockBadge);
 ReportRouter.get('/externalAPI/itemwiseBadge', ItemwiseStockBadge);
 ReportRouter.get('/externalAPI/transactionBatchStockReportByProId', TransactionBatchStockReportByProId);
 ReportRouter.get('/externalAPI/transactionBatchStockReportByProIdandGodownId', TransactionBatchStockReportByProIdandGodownId);
+ReportRouter.get('/externalAPI/purchaseOrderTripItemDetails', PurchaseOrderTripItemDetails);
+ReportRouter.get('/externalAPI/purchaseOrderPayment', PurchaseOrderPaymentReport);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
