@@ -317,13 +317,13 @@ const appMenu = () => {
                         SELECT 
                             p.*
                         FROM
-                            [${userPortalDB}].[dbo].[tbl_AppMenu] AS p
+                            tbl_AppMenu AS p
                         WHERE
                             p.id = m.parent_id
                         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
                     ), '{}') AS ParantData
                 FROM 
-                    [${userPortalDB}].[dbo].[tbl_AppMenu] AS m`);
+                    tbl_AppMenu AS m`);
 
             const result = menuData.recordset.map(data => ({
                 ...data,

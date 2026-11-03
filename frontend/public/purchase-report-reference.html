@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Purchase Report - Interactive Reference Screen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-hover: #172554;
+      --primary-light: #eff6ff;
+      --primary-border: #bfdbfe;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --bg-page: #f8fafc;
+      --border-color: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --row-zebra: #fafbfc;
+      --green-bg: #dcfce7;
+      --green-text: #15803d;
+      --green-border: #86efac;
+      --blue-bg: #e0f2fe;
+      --blue-text: #0369a1;
+      --blue-border: #bae6fd;
+      --amber-bg: #fef3c7;
+      --amber-text: #b45309;
+      --amber-border: #fde68a;
+      --red-bg: #fee2e2;
+      --red-text: #dc2626;
+      --red-border: #fca5a5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOP PAGE HEADER */
+    .top-header {
+      background-color: #ffffff;
+      border-bottom: 1px solid var(--border-color);
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      z-index: 10;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #1e3a8a;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-item {
+      font-size: 0.80rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .nav-item:hover {
+      color: var(--primary);
+      background-color: var(--primary-light);
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      background-color: var(--primary-light);
+      font-weight: 700;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .company-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #334155;
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-action {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-dark);
+      background: #ffffff;
+      color: #334155;
+      transition: all 0.15s ease;
+    }
+
+    .btn-action:hover {
+      background-color: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    .btn-excel {
+      color: #15803d;
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+    .btn-excel:hover {
+      background: #dcfce7;
+      border-color: #86efac;
+    }
+
+    .btn-pdf {
+      color: #b91c1c;
+      border-color: #fecaca;
+      background: #fef2f2;
+    }
+    .btn-pdf:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+    }
+
+    /* MAIN WRAPPER */
+    .main-wrapper {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 18px 14px 18px;
+      overflow: hidden;
+    }
+
+    /* CONTROLS BAR */
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .report-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.01em;
+    }
+
+    .count-chip {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+
+    .active-filter-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background-color: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 16px;
+      color: #1e3a8a;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .active-filter-badge:hover {
+      background-color: #dbeafe;
+    }
+
+    .controls-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-filters-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: #1e3a8a;
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.80rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(30, 58, 138, 0.25);
+      transition: all 0.15s ease;
+    }
+
+    .btn-filters-toggle:hover {
+      background-color: #162e6e;
+    }
+
+    /* DATE RANGE QUICK BAR */
+    .date-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .date-input {
+      font-family: inherit;
+      font-size: 0.76rem;
+      padding: 4px 8px;
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1e293b;
+      outline: none;
+    }
+
+    .date-input:focus {
+      border-color: var(--primary);
+    }
+
+    /* TABLE CARD */
+    .table-card {
+      flex: 1;
+      min-height: 0;
+      background-color: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .table-scroll {
+      flex: 1;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      text-align: left;
+    }
+
+    thead th {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.76rem;
+      padding: 7px 10px;
+      border-right: 1px solid rgba(255, 255, 255, 0.15);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      white-space: nowrap;
+    }
+
+    thead th:last-child {
+      border-right: none;
+    }
+
+    /* GRAND TOTAL STICKY ROW */
+    .sticky-total-row td {
+      background-color: #f1f5f9 !important;
+      font-weight: 800;
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      color: #0f172a;
+      border-bottom: 2px solid var(--border-dark);
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 31px;
+      z-index: 4;
+      white-space: nowrap;
+    }
+
+    .sticky-total-row td:last-child {
+      border-right: none;
+    }
+
+    .sticky-total-title {
+      color: var(--primary) !important;
+    }
+
+    .sticky-total-value {
+      color: #166534 !important;
+      font-weight: 800;
+    }
+
+    /* ROWS STYLING */
+    tbody tr.parent-row {
+      cursor: pointer;
+      border-bottom: 1px solid var(--border-color);
+      transition: background-color 0.15s ease;
+    }
+
+    tbody tr.parent-row:nth-child(4n+1) {
+      background-color: #ffffff;
+    }
+
+    tbody tr.parent-row:nth-child(4n+3) {
+      background-color: var(--row-zebra);
+    }
+
+    tbody tr.parent-row:hover {
+      background-color: #f1f5f9 !important;
+    }
+
+    tbody tr.parent-row.expanded {
+      background-color: #eff6ff !important;
+    }
+
+    td {
+      padding: 5px 10px;
+      border-right: 1px solid #f1f5f9;
+      white-space: nowrap;
+    }
+
+    td:last-child {
+      border-right: none;
+    }
+
+    .cell-center {
+      text-align: center;
+    }
+
+    .cell-right {
+      text-align: right;
+    }
+
+    .chevron-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      color: #64748b;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    tr.expanded .chevron-icon {
+      transform: rotate(180deg);
+      color: var(--primary);
+    }
+
+    .order-chip {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background-color: var(--blue-bg);
+      color: var(--blue-text);
+      border: 1px solid var(--blue-border);
+      display: inline-block;
+    }
+
+    .item-title {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .status-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      display: inline-block;
+    }
+
+    .tag-pending-delivery {
+      background-color: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+
+    .tag-transit {
+      background-color: var(--amber-bg);
+      color: var(--amber-text);
+      border: 1px solid var(--amber-border);
+    }
+
+    .tag-due {
+      background-color: var(--red-bg);
+      color: var(--red-text);
+      border: 1px solid var(--red-border);
+    }
+
+    .tag-completed {
+      background-color: var(--green-bg);
+      color: var(--green-text);
+      border: 1px solid var(--green-border);
+    }
+
+    .retailer-name {
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .retailer-city {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-left: 4px;
+    }
+
+    .tonnage-text {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .value-text {
+      font-weight: 700;
+      color: #166534;
+    }
+
+    /* COLLAPSIBLE CHILD ROW */
+    tr.child-row {
+      display: none;
+      background-color: #f8fafc;
+    }
+
+    tr.child-row.open {
+      display: table-row;
+    }
+
+    .expanded-container {
+      margin: 8px 12px 12px 12px;
+      background: #ffffff;
+      border: 1px solid var(--border-dark);
+      border-left: 4px solid var(--primary);
+      border-radius: 6px;
+      padding: 10px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .order-summary-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #f1f5f9;
+      padding: 6px 12px;
+      border-radius: 5px;
+      margin-bottom: 8px;
+      font-size: 0.74rem;
+      gap: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .summary-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .subtable-wrapper {
+      border: 1px solid #edf2f7;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .subtable {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.74rem;
+    }
+
+    .subtable th {
+      background-color: #1e3a8a;
+      color: #ffffff;
+      font-weight: 700;
+      padding: 5px 8px;
+      border-right: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .subtable td {
+      padding: 4px 8px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .badge-status {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .badge-arrived-today {
+      background-color: var(--green-bg);
+      color: var(--green-text);
+      border: 1px solid var(--green-border);
+    }
+
+    .badge-arrived-earlier {
+      background-color: var(--blue-bg);
+      color: var(--blue-text);
+      border: 1px solid var(--blue-border);
+    }
+
+    .badge-pending-delivery {
+      background-color: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+
+    .badge-in-transit {
+      background-color: var(--amber-bg);
+      color: var(--amber-text);
+      border: 1px solid var(--amber-border);
+    }
+
+    .trip-btn {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background-color: #eff6ff;
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+
+    .trip-btn:hover {
+      background-color: #dbeafe;
+    }
+
+    /* PINNED PAGINATION FOOTER */
+    .pagination-bar {
+      height: 38px;
+      background-color: #ffffff;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 16px;
+      gap: 16px;
+      font-size: 0.76rem;
+      color: #475569;
+      flex-shrink: 0;
+    }
+
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .page-btn {
+      width: 26px;
+      height: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-dark);
+      background: #ffffff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .page-btn:hover {
+      background: #f1f5f9;
+    }
+
+    /* FIXED DRAWER TOGGLE TAB ON RIGHT SCREEN EDGE */
+    .fixed-drawer-toggle {
+      position: fixed;
+      right: 1px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 26px;
+      height: 32px;
+      background-color: #1e3a8a;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px 0 0 6px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1200;
+      transition: all 0.2s ease;
+    }
+
+    .fixed-drawer-toggle:hover {
+      background-color: #162e6e;
+      width: 28px;
+    }
+
+    /* REPORT FILTER DRAWER */
+    .drawer-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(1.5px);
+      display: none;
+      z-index: 1290;
+    }
+
+    .drawer-backdrop.active {
+      display: block;
+    }
+
+    .drawer-panel {
+      position: fixed;
+      top: 0;
+      right: -340px;
+      width: 320px;
+      height: 100vh;
+      background-color: #f1f5f9;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+      z-index: 1300;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .drawer-panel.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: #ffffff;
+    }
+
+    .drawer-close-btn {
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      color: #64748b;
+      line-height: 1;
+    }
+
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .drawer-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .drawer-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+
+    .drawer-date-input {
+      font-family: inherit;
+      font-size: 0.82rem;
+      padding: 8px 10px;
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      background: #ffffff;
+      outline: none;
+    }
+
+    .drawer-date-input:focus {
+      border-color: var(--primary);
+    }
+
+    .drawer-radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .drawer-radio-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .drawer-radio-card:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .drawer-radio-card.selected {
+      background: #eff6ff;
+      border-color: #1e3a8a;
+      box-shadow: 0 1px 3px rgba(30, 58, 138, 0.12);
+    }
+
+    .drawer-radio-circle {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .drawer-radio-card.selected .drawer-radio-circle {
+      border-color: #1e3a8a;
+    }
+
+    .drawer-radio-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #1e3a8a;
+      transform: scale(0);
+      transition: transform 0.15s;
+    }
+
+    .drawer-radio-card.selected .drawer-radio-dot {
+      transform: scale(1);
+    }
+
+    .drawer-radio-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .drawer-radio-card.selected .drawer-radio-title {
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+
+    .drawer-radio-sub {
+      font-size: 0.68rem;
+      color: #64748b;
+    }
+
+    .drawer-count-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background-color: #e2e8f0;
+      color: #475569;
+    }
+
+    .drawer-radio-card.selected .drawer-count-badge {
+      background-color: #1e3a8a;
+      color: #ffffff;
+    }
+
+    .drawer-footer {
+      padding: 16px;
+      background: #ffffff;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .btn-apply-drawer {
+      width: 100%;
+      background-color: #1e3a8a;
+      color: #ffffff;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .btn-apply-drawer:hover {
+      background-color: #162e6e;
+    }
+
+    /* MODAL DIALOG */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1400;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 10px;
+      width: 520px;
+      max-width: 90%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-icon-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: #eff6ff;
+      color: #1e3a8a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #64748b;
+    }
+
+    .modal-body {
+      padding: 16px 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      font-size: 0.78rem;
+    }
+
+    .modal-field-label {
+      font-size: 0.70rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .modal-field-val {
+      font-weight: 700;
+      color: #1e293b;
+      font-size: 0.88rem;
+    }
+
+    .modal-footer {
+      padding: 10px 18px;
+      background: #f8fafc;
+      border-top: 1px solid var(--border-color);
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="top-header">
+    <div class="brand-section">
+      <div class="brand-logo">P</div>
+      <span class="brand-title">PUKAL REPORTS</span>
+      <nav class="nav-links">
+        <a href="#" class="nav-item">Dashboard</a>
+        <a href="#" class="nav-item active">Purchase Report</a>
+        <a href="#" class="nav-item">Sales Report</a>
+        <a href="#" class="nav-item">Stock Report</a>
+        <a href="#" class="nav-item">Expenses</a>
+      </nav>
+    </div>
+
+    <div class="header-actions">
+      <div class="company-pill">
+        <span>🏢</span> PUKAL AGRO TRADERS PVT LTD
+      </div>
+      <button class="btn-action btn-excel" onclick="alert('Excel export triggered!')">
+        <span>📊</span> Export Excel
+      </button>
+      <button class="btn-action btn-pdf" onclick="alert('PDF export triggered!')">
+        <span>📄</span> Export PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="main-wrapper">
+    
+    <!-- CONTROLS & FILTER BAR -->
+    <div class="controls-bar">
+      <!-- Title & Active Filter Chip -->
+      <div class="title-group">
+        <h1 class="report-title" id="pageTitle">Purchase Report - Today's Arrival List</h1>
+        <span class="count-chip" id="titleCountBadge">8 Arrival Items</span>
+        
+        <div class="active-filter-badge" onclick="openDrawer()" title="Click to open filter drawer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          Active Filter: <strong id="activeFilterBadgeText">Today's Arrival</strong>
+        </div>
+      </div>
+
+      <!-- Quick Controls on Right -->
+      <div class="controls-right">
+        <div class="date-filter-group">
+          <span style="font-size: 0.76rem; font-weight: 600; color: #475569;">Date:</span>
+          <input type="date" class="date-input" id="pageFromDate" value="2026-09-12" />
+          <span style="font-size: 0.76rem; color: #64748b;">to</span>
+          <input type="date" class="date-input" id="pageToDate" value="2026-09-12" />
+        </div>
+
+        <button class="btn-filters-toggle" onclick="openDrawer()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+          Filters
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN TABLE CARD -->
+    <div class="table-card">
+      <div class="table-scroll">
+        <table id="purchaseTable">
+          <thead>
+            <tr>
+              <th style="width: 38px; text-align: center;">#</th>
+              <th style="width: 55px;">SNo</th>
+              <th style="width: 100px;">Date</th>
+              <th style="width: 135px;">Order Id</th>
+              <th>Item Name</th>
+              <th style="width: 230px;">Retailer Name</th>
+              <th style="width: 120px; text-align: right;">Tonnage</th>
+              <th style="width: 140px; text-align: right;">Value</th>
+            </tr>
+            <!-- STICKY GRAND TOTAL ROW -->
+            <tr class="sticky-total-row">
+              <td colspan="6" class="sticky-total-title" id="stickyTotalLabel">
+                TOTAL ARRIVALS TODAY (8 Items)
+              </td>
+              <td class="cell-right" id="stickyTotalTonnage">91.000 MT</td>
+              <td class="sticky-total-value" id="stickyTotalValue">₹ 89,01,000.00</td>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Dynamic rows injected here -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PINNED PAGINATION FOOTER -->
+      <div class="pagination-bar">
+        <span>Rows per page: <strong>100</strong></span>
+        <span id="paginationInfo">1–8 of 8</span>
+        <div class="pagination-controls">
+          <button class="page-btn" disabled>&lt;</button>
+          <button class="page-btn" disabled>&gt;</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- FIXED DRAWER TOGGLE TAB ON RIGHT SCREEN EDGE -->
+  <button class="fixed-drawer-toggle" id="fixedDrawerToggle" onclick="toggleDrawer()" title="Toggle Filters Drawer">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+  </button>
+
+  <!-- REPORT FILTER DRAWER -->
+  <div class="drawer-backdrop" id="filterDrawerBackdrop" onclick="closeDrawer()"></div>
+  <div class="drawer-panel" id="filterDrawerPanel">
+    <div class="drawer-header">
+      <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Filters</h3>
+      <button class="drawer-close-btn" onclick="closeDrawer()">&times;</button>
+    </div>
+    
+    <div class="drawer-body">
+      <div class="drawer-field-group">
+        <label class="drawer-label">From Date</label>
+        <input type="date" class="drawer-date-input" id="drawerFromDate" value="2026-09-12" />
+      </div>
+      
+      <div class="drawer-field-group">
+        <label class="drawer-label">To Date</label>
+        <input type="date" class="drawer-date-input" id="drawerToDate" value="2026-09-12" />
+      </div>
+
+      <!-- PURCHASE FILTER (RADIO TYPE) -->
+      <div class="drawer-field-group" style="margin-top: 6px;">
+        <label class="drawer-label">Purchase Filter</label>
+        
+        <div class="drawer-radio-group">
+          <!-- Option 1: Today's Arrival (DEFAULT) -->
+          <div class="drawer-radio-card selected" id="drawer-opt-today_arrival" onclick="selectDrawerOption('today_arrival')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="drawer-radio-circle">
+                <div class="drawer-radio-dot"></div>
+              </div>
+              <div>
+                <div class="drawer-radio-title">Today's Arrival</div>
+                <div class="drawer-radio-sub">Default Filter</div>
+              </div>
+            </div>
+            <span class="drawer-count-badge" id="drawer-count-today_arrival">8</span>
+          </div>
+
+          <!-- Option 2: Pending Orders -->
+          <div class="drawer-radio-card" id="drawer-opt-pending_orders" onclick="selectDrawerOption('pending_orders')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="drawer-radio-circle">
+                <div class="drawer-radio-dot"></div>
+              </div>
+              <div>
+                <div class="drawer-radio-title">Pending Orders</div>
+              </div>
+            </div>
+            <span class="drawer-count-badge" id="drawer-count-pending_orders">8</span>
+          </div>
+
+          <!-- Option 3: Pending Payments -->
+          <div class="drawer-radio-card" id="drawer-opt-pending_payments" onclick="selectDrawerOption('pending_payments')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="drawer-radio-circle">
+                <div class="drawer-radio-dot"></div>
+              </div>
+              <div>
+                <div class="drawer-radio-title">Pending Payments</div>
+              </div>
+            </div>
+            <span class="drawer-count-badge" id="drawer-count-pending_payments">5</span>
+          </div>
+
+          <!-- Option 4: Completed -->
+          <div class="drawer-radio-card" id="drawer-opt-completed" onclick="selectDrawerOption('completed')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="drawer-radio-circle">
+                <div class="drawer-radio-dot"></div>
+              </div>
+              <div>
+                <div class="drawer-radio-title">Completed</div>
+              </div>
+            </div>
+            <span class="drawer-count-badge" id="drawer-count-completed">4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <button class="btn-apply-drawer" onclick="applyDrawerFilters()">Apply Filter</button>
+    </div>
+  </div>
+
+  <!-- TRIP DETAILS MODAL -->
+  <div class="modal-backdrop" id="tripModal" onclick="closeModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge">🚚</div>
+          <div>
+            <div style="font-weight: 800; font-size: 1rem; color: #0f172a;">Trip & Logistics Details</div>
+            <div style="font-size: 0.74rem; color: #64748b;" id="modalRefText">Ref: ORD-2026-0841</div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeTripModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="modal-field-label">Vehicle No</div>
+          <div class="modal-field-val" id="modalVehicleNo">MP 09 GH 4521</div>
+        </div>
+        <div>
+          <div class="modal-field-label">Trip Status</div>
+          <span class="badge-status badge-arrived-today" id="modalStatus">Delivered</span>
+        </div>
+        <div>
+          <div class="modal-field-label">Transporter</div>
+          <div class="modal-field-val" id="modalTransporter">Swastik Roadlines</div>
+        </div>
+        <div>
+          <div class="modal-field-label">LR Number</div>
+          <div class="modal-field-val" id="modalLrNo">SW-89211</div>
+        </div>
+        <div>
+          <div class="modal-field-label">Driver Name & Phone</div>
+          <div class="modal-field-val" id="modalDriverName">Ramesh Sharma</div>
+          <div style="font-size: 0.74rem; color: #64748b;" id="modalDriverPhone">+91 98260 12345</div>
+        </div>
+        <div>
+          <div class="modal-field-label">Dispatch & Delivery</div>
+          <div class="modal-field-val" id="modalDispatchDate">09/09/2026</div>
+          <div style="font-size: 0.74rem; color: #166534; font-weight: 600;" id="modalDeliveryDate">Delivered: 12/09/2026</div>
+        </div>
+        <div>
+          <div class="modal-field-label">Loading Point</div>
+          <div style="font-weight: 600; color: #334155;" id="modalLoadingPoint">Indore Mandi</div>
+        </div>
+        <div>
+          <div class="modal-field-label">Destination Godown</div>
+          <div style="font-weight: 600; color: #334155;" id="modalDestinationGodown">Central Godown - Unit 1</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-action" onclick="closeTripModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ================= DUMMY DATA FOR ALL 4 FILTERS ================= */
+
+    const DATA_TODAY_ARRIVAL = [
+      {
+        id: "arr-1", sNo: 1, date: "12/09/2026", orderId: "ORD-2026-0841",
+        itemName: "ROYAL-GOLD WHITEGRAM-AA 30KG", retailerName: "RAVI INDUSTRIES", city: "INDORE",
+        tonnage: 12.0, itemValue: 1260000,
+        order: {
+          orderId: "ORD-2026-0841", orderDate: "28/08/2026", retailerName: "RAVI INDUSTRIES", city: "INDORE", state: "MADHYA PRADESH",
+          totalTonnage: 44.0, totalValue: 4580000, paid: 3000000, balance: 1580000, paymentStatus: "Partial",
+          items: [
+            { no: 1, name: "ROYAL-GOLD WHITEGRAM-AA 30KG", qty: "400 Bags", tonnage: 12.0, rate: 105000, value: 1260000, date: "12/09/2026", status: "Arrived Today", trip: { vehicle: "MP 09 GH 4521", driver: "Ramesh Sharma", phone: "+91 98260 12345", transporter: "Swastik Roadlines", lr: "SW-89211", dispatch: "09/09/2026", delivery: "12/09/2026", status: "Delivered", godown: "Central Godown - Unit 1", loading: "Indore Mandi" } },
+            { no: 2, name: "PREMIUM URAD DHALL 30KG", qty: "350 Bags", tonnage: 10.5, rate: 110000, value: 1155000, date: "03/09/2026", status: "Arrived Earlier", trip: { vehicle: "MP 09 BC 8890", driver: "Dinesh Verma", phone: "+91 98260 54321", transporter: "Swastik Roadlines", lr: "SW-88910", dispatch: "01/09/2026", delivery: "03/09/2026", status: "Delivered", godown: "Central Godown - Unit 1", loading: "Indore Mandi" } },
+            { no: 3, name: "YELLOW TOOR WHOLE 50KG", qty: "300 Bags", tonnage: 15.0, rate: 85000, value: 1275000, date: "06/09/2026", status: "Arrived Earlier", trip: { vehicle: "MP 09 CD 7741", driver: "Mukesh Yadav", phone: "+91 98260 67890", transporter: "Express Cargo Lines", lr: "EC-90112", dispatch: "04/09/2026", delivery: "06/09/2026", status: "Delivered", godown: "South Godown Hub", loading: "Indore Mandi" } },
+            { no: 4, name: "CHANA SPECIAL DESI 30KG", qty: "216 Bags", tonnage: 6.5, rate: 137000, value: 890000, date: "-", status: "Pending Delivery", trip: null },
+          ]
+        }
+      },
+      {
+        id: "arr-2", sNo: 2, date: "12/09/2026", orderId: "ORD-2026-0842",
+        itemName: "1000 WHITEGRAM-AA 30KG", retailerName: "TAMILNADU TRADERS", city: "VIRUDHUNAGAR",
+        tonnage: 15.0, itemValue: 1290000,
+        order: {
+          orderId: "ORD-2026-0842", orderDate: "29/08/2026", retailerName: "TAMILNADU TRADERS", city: "VIRUDHUNAGAR", state: "TAMIL NADU",
+          totalTonnage: 47.0, totalValue: 4235000, paid: 4235000, balance: 0, paymentStatus: "Paid",
+          items: [
+            { no: 1, name: "1000 WHITEGRAM-AA 30KG", qty: "500 Bags", tonnage: 15.0, rate: 86000, value: 1290000, date: "12/09/2026", status: "Arrived Today", trip: { vehicle: "TN 67 AB 1234", driver: "K. Murugan", phone: "+91 94431 11223", transporter: "Southern Logistics", lr: "SL-44102", dispatch: "08/09/2026", delivery: "12/09/2026", status: "Delivered", godown: "Madurai Terminal", loading: "Virudhunagar Yard" } },
+            { no: 2, name: "MOONG WHOLE SPECIAL 50KG", qty: "300 Bags", tonnage: 15.0, rate: 86000, value: 1290000, date: "04/09/2026", status: "Arrived Earlier", trip: { vehicle: "TN 67 CD 5678", driver: "S. Selvam", phone: "+91 94431 44556", transporter: "Southern Logistics", lr: "SL-44018", dispatch: "02/09/2026", delivery: "04/09/2026", status: "Delivered", godown: "Madurai Terminal", loading: "Virudhunagar Yard" } },
+            { no: 3, name: "TOOR DHALL PREMIUM 30KG", qty: "300 Bags", tonnage: 9.0, rate: 95000, value: 855000, date: "07/09/2026", status: "Arrived Earlier", trip: { vehicle: "TN 67 EF 9900", driver: "M. Kumar", phone: "+91 94431 77889", transporter: "Southern Logistics", lr: "SL-44155", dispatch: "05/09/2026", delivery: "07/09/2026", status: "Delivered", godown: "Madurai Terminal", loading: "Virudhunagar Yard" } },
+            { no: 4, name: "FRIED GRAM (POTTUKADALAI) 25KG", qty: "320 Bags", tonnage: 8.0, rate: 100000, value: 800000, date: "-", status: "Pending Delivery", trip: null }
+          ]
+        }
+      },
+      {
+        id: "arr-3", sNo: 3, date: "12/09/2026", orderId: "ORD-2026-0843",
+        itemName: "RAM TOOR-DHALL 30KG", retailerName: "SHREE RAM TRADERS", city: "GONDAL",
+        tonnage: 6.0, itemValue: 792000,
+        order: {
+          orderId: "ORD-2026-0843", orderDate: "30/08/2026", retailerName: "SHREE RAM TRADERS", city: "GONDAL", state: "GUJARAT",
+          totalTonnage: 36.0, totalValue: 4712000, paid: 2500000, balance: 2212000, paymentStatus: "Partial",
+          items: [
+            { no: 1, name: "RAM TOOR-DHALL 30KG", qty: "200 Bags", tonnage: 6.0, rate: 132000, value: 792000, date: "12/09/2026", status: "Arrived Today", trip: { vehicle: "GJ 03 AX 9911", driver: "Hitesh Patel", phone: "+91 98240 11223", transporter: "Gujarat Saurashtra Freight", lr: "GS-77210", dispatch: "08/09/2026", delivery: "12/09/2026", status: "Delivered", godown: "Western Regional Godown", loading: "Gondal Market Yard" } },
+            { no: 2, name: "CHANA DHALL SUPER 30KG", qty: "400 Bags", tonnage: 12.0, rate: 132000, value: 1584000, date: "05/09/2026", status: "Arrived Earlier", trip: { vehicle: "GJ 03 BY 4455", driver: "Bhavesh Makwana", phone: "+91 98240 44556", transporter: "Gujarat Saurashtra Freight", lr: "GS-77119", dispatch: "02/09/2026", delivery: "05/09/2026", status: "Delivered", godown: "Western Regional Godown", loading: "Gondal Market Yard" } },
+            { no: 3, name: "KABULI CHANA MEDIUM 50KG", qty: "200 Bags", tonnage: 10.0, rate: 145000, value: 1450000, date: "08/09/2026", status: "Arrived Earlier", trip: { vehicle: "GJ 03 CZ 1122", driver: "Jayesh Solanki", phone: "+91 98240 77889", transporter: "Speedex Logistics", lr: "SX-66512", dispatch: "06/09/2026", delivery: "08/09/2026", status: "Delivered", godown: "Western Regional Godown", loading: "Gondal Market Yard" } },
+            { no: 4, name: "MOONG WHOLE ORGANIC 30KG", qty: "266 Bags", tonnage: 8.0, rate: 110750, value: 886000, date: "-", status: "Pending Delivery", trip: null }
+          ]
+        }
+      },
+      {
+        id: "arr-4", sNo: 4, date: "12/09/2026", orderId: "ORD-2026-0844",
+        itemName: "URAD GOTA SPECIAL 30KG", retailerName: "MANN ENTERPRISES", city: "JAORA",
+        tonnage: 6.0, itemValue: 558000,
+        order: {
+          orderId: "ORD-2026-0844", orderDate: "01/09/2026", retailerName: "MANN ENTERPRISES", city: "JAORA", state: "MADHYA PRADESH",
+          totalTonnage: 32.0, totalValue: 3108000, paid: 0, balance: 3108000, paymentStatus: "Unpaid",
+          items: [
+            { no: 1, name: "URAD GOTA SPECIAL 30KG", qty: "200 Bags", tonnage: 6.0, rate: 93000, value: 558000, date: "12/09/2026", status: "Arrived Today", trip: { vehicle: "MP 43 CA 6677", driver: "Sunil Rathore", phone: "+91 99810 11223", transporter: "Malwa Express", lr: "ME-22104", dispatch: "09/09/2026", delivery: "12/09/2026", status: "Delivered", godown: "Ratlam Depot", loading: "Jaora Mandi" } },
+            { no: 2, name: "MASOOR DHALL FOOTBALL 30KG", qty: "200 Bags", tonnage: 6.0, rate: 93000, value: 558000, date: "04/09/2026", status: "Arrived Earlier", trip: { vehicle: "MP 43 DB 8899", driver: "Kailash Mali", phone: "+91 99810 44556", transporter: "Malwa Express", lr: "ME-22015", dispatch: "02/09/2026", delivery: "04/09/2026", status: "Delivered", godown: "Ratlam Depot", loading: "Jaora Mandi" } },
+            { no: 3, name: "CHANA WHOLE BOLD 50KG", qty: "200 Bags", tonnage: 10.0, rate: 102000, value: 1020000, date: "07/09/2026", status: "Arrived Earlier", trip: { vehicle: "MP 43 EA 1123", driver: "Devendra Jat", phone: "+91 99810 77889", transporter: "Central Transport Hub", lr: "CT-90812", dispatch: "05/09/2026", delivery: "07/09/2026", status: "Delivered", godown: "Ratlam Depot", loading: "Jaora Mandi" } },
+            { no: 4, name: "GREEN PEAS DRIED 50KG", qty: "200 Bags", tonnage: 10.0, rate: 97200, value: 972000, date: "-", status: "Pending Delivery", trip: null }
+          ]
+        }
+      },
+      {
+        id: "arr-5", sNo: 5, date: "12/09/2026", orderId: "ORD-2026-0845",
+        itemName: "CHANA DHALL REGULAR 30KG", retailerName: "SAMRAT INDUSTRIES", city: "RAJKOT",
+        tonnage: 8.0, itemValue: 1096000,
+        order: {
+          orderId: "ORD-2026-0845", orderDate: "02/09/2026", retailerName: "SAMRAT INDUSTRIES", city: "RAJKOT", state: "GUJARAT",
+          totalTonnage: 38.0, totalValue: 5122000, paid: 5122000, balance: 0, paymentStatus: "Paid",
+          items: [
+            { no: 1, name: "CHANA DHALL REGULAR 30KG", qty: "266 Bags", tonnage: 8.0, rate: 137000, value: 1096000, date: "12/09/2026", status: "Arrived Today", trip: { vehicle: "GJ 04 AA 1188", driver: "Pravin Bhai", phone: "+91 98250 11223", transporter: "Saurashtra Transporters", lr: "ST-88901", dispatch: "09/09/2026", delivery: "12/09/2026", status: "Delivered", godown: "North-West Yard", loading: "Rajkot Industrial Area" } },
+            { no: 2, name: "WHITE PEAS (VATANA) 50KG", qty: "160 Bags", tonnage: 8.0, rate: 137000, value: 1096000, date: "05/09/2026", status: "Arrived Earlier", trip: { vehicle: "GJ 04 BB 3344", driver: "Kishore Parmar", phone: "+91 98250 44556", transporter: "Saurashtra Transporters", lr: "ST-88812", dispatch: "03/09/2026", delivery: "05/09/2026", status: "Delivered", godown: "North-West Yard", loading: "Rajkot Industrial Area" } },
+            { no: 3, name: "TOOR DHALL PHATKA 30KG", qty: "400 Bags", tonnage: 12.0, rate: 140000, value: 1680000, date: "08/09/2026", status: "Arrived Earlier", trip: { vehicle: "GJ 04 CC 7788", driver: "Mansukh Chavda", phone: "+91 98250 77889", transporter: "Rajkot Speed Lines", lr: "RSL-33412", dispatch: "06/09/2026", delivery: "08/09/2026", status: "Delivered", godown: "North-West Yard", loading: "Rajkot Industrial Area" } },
+            { no: 4, name: "SOYA BEAN SEED 50KG", qty: "200 Bags", tonnage: 10.0, rate: 125000, value: 1250000, date: "-", status: "Pending Delivery", trip: null }
+          ]
+        }
+      },
+      {
+        id: "arr-6", sNo: 6, date: "12/09/2026", orderId: "ORD-2026-0846",
+        itemName: "MASOOR WHOLE PREMIUM 50KG", retailerName: "M.S.TRADERS", city: "MADURAI",
+        tonnage: 9.0, itemValue: 657000,
+        order: {
+          orderId: "ORD-2026-0846", orderDate: "03/09/2026", retailerName: "M.S.TRADERS", city: "MADURAI", state: "TAMIL NADU",
+          totalTonnage: 36.0, totalValue: 2628000, paid: 1800000, balance: 828000, paymentStatus: "Partial",
+          items: [
+            { no: 1, name: "MASOOR WHOLE PREMIUM 50KG", qty: "180 Bags", tonnage: 9.0, rate: 73000, value: 657000, date: "12/09/2026", status: "Arrived Today", trip: { vehicle: "TN 59 AB 9988", driver: "S. Karuppasamy", phone: "+91 94420 11223", transporter: "Madurai Cargo Lines", lr: "MC-44120", dispatch: "09/09/2026", delivery: "12/09/2026", status: "Delivered", godown: "South Zone Main Godown", loading: "Madurai Anuppanadi Yard" } },
+            { no: 2, name: "URAD DHALL SPLIT 30KG", qty: "300 Bags", tonnage: 9.0, rate: 73000, value: 657000, date: "06/09/2026", status: "Arrived Earlier", trip: { vehicle: "TN 59 CD 1122", driver: "V. Thangavel", phone: "+91 94420 44556", transporter: "Madurai Cargo Lines", lr: "MC-44090", dispatch: "04/09/2026", delivery: "06/09/2026", status: "Delivered", godown: "South Zone Main Godown", loading: "Madurai Anuppanadi Yard" } },
+            { no: 3, name: "CHANA BROWN GRADE-A 50KG", qty: "180 Bags", tonnage: 9.0, rate: 75000, value: 675000, date: "08/09/2026", status: "Arrived Earlier", trip: { vehicle: "TN 59 EF 3344", driver: "K. Manikandan", phone: "+91 94420 77889", transporter: "Sri Meenakshi Transports", lr: "SM-11290", dispatch: "06/09/2026", delivery: "08/09/2026", status: "Delivered", godown: "South Zone Main Godown", loading: "Madurai Anuppanadi Yard" } },
+            { no: 4, name: "CORIANDER WHOLE 25KG", qty: "360 Bags", tonnage: 9.0, rate: 71000, value: 639000, date: "-", status: "Pending Delivery", trip: null }
+          ]
+        }
+      },
+      {
+        id: "arr-7", sNo: 7, date: "12/09/2026", orderId: "ORD-2026-0847",
+        itemName: "TOOR DHALL PREMIUM 30KG", retailerName: "SRI MURUGAN AGRO", city: "THANJAVUR",
+        tonnage: 10.0, itemValue: 980000,
+        order: {
+          orderId: "ORD-2026-0847", orderDate: "04/09/2026", retailerName: "SRI MURUGAN AGRO", city: "THANJAVUR", state: "TAMIL NADU",
+          totalTonnage: 37.0, totalValue: 3626000, paid: 3626000, balance: 0, paymentStatus: "Paid",
+          items: [
+            { no: 1, name: "TOOR DHALL PREMIUM 30KG", qty: "333 Bags", tonnage: 10.0, rate: 98000, value: 980000, date: "12/09/2026", status: "Arrived Today", trip: { vehicle: "TN 49 AZ 1212", driver: "A. Rajendran", phone: "+91 98424 11223", transporter: "Cauvery Roadways", lr: "CR-90801", dispatch: "09/09/2026", delivery: "12/09/2026", status: "Delivered", godown: "Delta Agro Godown", loading: "Thanjavur Old Bus Stand Yard" } },
+            { no: 2, name: "MOONG DHALL YELLOW 30KG", qty: "333 Bags", tonnage: 10.0, rate: 98000, value: 980000, date: "07/09/2026", status: "Arrived Earlier", trip: { vehicle: "TN 49 BY 3434", driver: "S. Balan", phone: "+91 98424 44556", transporter: "Cauvery Roadways", lr: "CR-90715", dispatch: "05/09/2026", delivery: "07/09/2026", status: "Delivered", godown: "Delta Agro Godown", loading: "Thanjavur Old Bus Stand Yard" } },
+            { no: 3, name: "BLACK GRAM WHOLE 50KG", qty: "180 Bags", tonnage: 9.0, rate: 96000, value: 864000, date: "09/09/2026", status: "Arrived Earlier", trip: { vehicle: "TN 49 CX 5656", driver: "K. Natarajan", phone: "+91 98424 77889", transporter: "Trichy Logistics Hub", lr: "TL-55120", dispatch: "07/09/2026", delivery: "09/09/2026", status: "Delivered", godown: "Delta Agro Godown", loading: "Thanjavur Old Bus Stand Yard" } },
+            { no: 4, name: "WHITE GRAM BOLD 30KG", qty: "266 Bags", tonnage: 8.0, rate: 100250, value: 802000, date: "-", status: "Pending Delivery", trip: null }
+          ]
+        }
+      },
+      {
+        id: "arr-8", sNo: 8, date: "12/09/2026", orderId: "ORD-2026-0848",
+        itemName: "CHANA DAL SUPER FINE 30KG", retailerName: "GLOBAL COMMODITIES", city: "AHMEDABAD",
+        tonnage: 15.0, itemValue: 1725000,
+        order: {
+          orderId: "ORD-2026-0848", orderDate: "05/09/2026", retailerName: "GLOBAL COMMODITIES", city: "AHMEDABAD", state: "GUJARAT",
+          totalTonnage: 48.0, totalValue: 5520000, paid: 3500000, balance: 2020000, paymentStatus: "Partial",
+          items: [
+            { no: 1, name: "CHANA DAL SUPER FINE 30KG", qty: "500 Bags", tonnage: 15.0, rate: 115000, value: 1725000, date: "12/09/2026", status: "Arrived Today", trip: { vehicle: "GJ 01 XX 7711", driver: "Ramesh Barot", phone: "+91 98250 11223", transporter: "National Speed Cargo", lr: "NSC-8012", dispatch: "09/09/2026", delivery: "12/09/2026", status: "Delivered", godown: "Ahmedabad Mega Terminal", loading: "Sanand Agro Hub" } },
+            { no: 2, name: "KABULI CHANA BOLD 50KG", qty: "200 Bags", tonnage: 10.0, rate: 115000, value: 1150000, date: "08/09/2026", status: "Arrived Earlier", trip: { vehicle: "GJ 01 XX 7712", driver: "Chetan Parmar", phone: "+91 98250 99881", transporter: "National Speed Cargo", lr: "NSC-8012", dispatch: "06/09/2026", delivery: "08/09/2026", status: "Delivered", godown: "Ahmedabad Mega Terminal", loading: "Sanand Agro Hub" } },
+            { no: 3, name: "TURMERIC WHOLE SALEM 50KG", qty: "220 Bags", tonnage: 11.0, rate: 112000, value: 1232000, date: "09/09/2026", status: "Arrived Earlier", trip: { vehicle: "GJ 01 YY 9933", driver: "Jignesh Joshi", phone: "+91 98250 33445", transporter: "Apex Logistics", lr: "AL-77190", dispatch: "07/09/2026", delivery: "09/09/2026", status: "Delivered", godown: "Ahmedabad Mega Terminal", loading: "Sanand Agro Hub" } },
+            { no: 4, name: "JEERA WHOLE UNJHA 30KG", qty: "400 Bags", tonnage: 12.0, rate: 117750, value: 1413000, date: "-", status: "Pending Delivery", trip: null }
+          ]
+        }
+      },
+    ];
+
+    const DATA_PENDING_ORDERS = [
+      {
+        id: "pend-1", sNo: 1, date: "12/09/2026", orderId: "ORD-2026-0841",
+        itemName: "CHANA SPECIAL DESI 30KG", retailerName: "RAVI INDUSTRIES", city: "INDORE",
+        qty: "216 Bags", tonnage: 6.5, itemValue: 890000, statusTag: "Pending Delivery",
+        order: DATA_TODAY_ARRIVAL[0].order
+      },
+      {
+        id: "pend-2", sNo: 2, date: "12/09/2026", orderId: "ORD-2026-0842",
+        itemName: "FRIED GRAM (POTTUKADALAI) 25KG", retailerName: "TAMILNADU TRADERS", city: "VIRUDHUNAGAR",
+        qty: "320 Bags", tonnage: 8.0, itemValue: 800000, statusTag: "Pending Delivery",
+        order: DATA_TODAY_ARRIVAL[1].order
+      },
+      {
+        id: "pend-3", sNo: 3, date: "12/09/2026", orderId: "ORD-2026-0843",
+        itemName: "MOONG WHOLE ORGANIC 30KG", retailerName: "SHREE RAM TRADERS", city: "GONDAL",
+        qty: "266 Bags", tonnage: 8.0, itemValue: 886000, statusTag: "Pending Delivery",
+        order: DATA_TODAY_ARRIVAL[2].order
+      },
+      {
+        id: "pend-4", sNo: 4, date: "12/09/2026", orderId: "ORD-2026-0844",
+        itemName: "GREEN PEAS DRIED 50KG", retailerName: "MANN ENTERPRISES", city: "JAORA",
+        qty: "200 Bags", tonnage: 10.0, itemValue: 972000, statusTag: "Pending Delivery",
+        order: DATA_TODAY_ARRIVAL[3].order
+      },
+      {
+        id: "pend-5", sNo: 5, date: "12/09/2026", orderId: "ORD-2026-0845",
+        itemName: "SOYA BEAN SEED 50KG", retailerName: "SAMRAT INDUSTRIES", city: "RAJKOT",
+        qty: "200 Bags", tonnage: 10.0, itemValue: 1250000, statusTag: "Pending Delivery",
+        order: DATA_TODAY_ARRIVAL[4].order
+      },
+      {
+        id: "pend-6", sNo: 6, date: "12/09/2026", orderId: "ORD-2026-0846",
+        itemName: "CORIANDER WHOLE 25KG", retailerName: "M.S.TRADERS", city: "MADURAI",
+        qty: "360 Bags", tonnage: 9.0, itemValue: 639000, statusTag: "Pending Delivery",
+        order: DATA_TODAY_ARRIVAL[5].order
+      },
+      {
+        id: "pend-7", sNo: 7, date: "12/09/2026", orderId: "ORD-2026-0847",
+        itemName: "WHITE GRAM BOLD 30KG", retailerName: "SRI MURUGAN AGRO", city: "THANJAVUR",
+        qty: "266 Bags", tonnage: 8.0, itemValue: 802000, statusTag: "Pending Delivery",
+        order: DATA_TODAY_ARRIVAL[6].order
+      },
+      {
+        id: "pend-8", sNo: 8, date: "12/09/2026", orderId: "ORD-2026-0848",
+        itemName: "JEERA WHOLE UNJHA 30KG", retailerName: "GLOBAL COMMODITIES", city: "AHMEDABAD",
+        qty: "400 Bags", tonnage: 12.0, itemValue: 1413000, statusTag: "Pending Delivery",
+        order: DATA_TODAY_ARRIVAL[7].order
+      },
+    ];
+
+    const DATA_PENDING_PAYMENTS = [
+      {
+        id: "pay-1", sNo: 1, date: "28/08/2026", orderId: "ORD-2026-0841",
+        itemName: "ROYAL-GOLD WHITEGRAM-AA (4 Items Ordered)", retailerName: "RAVI INDUSTRIES", city: "INDORE",
+        qty: "1,266 Bags", tonnage: 44.0, itemValue: 1580000, statusTag: "Partial Due",
+        order: DATA_TODAY_ARRIVAL[0].order
+      },
+      {
+        id: "pay-2", sNo: 2, date: "30/08/2026", orderId: "ORD-2026-0843",
+        itemName: "RAM TOOR-DHALL (4 Items Ordered)", retailerName: "SHREE RAM TRADERS", city: "GONDAL",
+        qty: "1,066 Bags", tonnage: 36.0, itemValue: 2212000, statusTag: "Partial Due",
+        order: DATA_TODAY_ARRIVAL[2].order
+      },
+      {
+        id: "pay-3", sNo: 3, date: "01/09/2026", orderId: "ORD-2026-0844",
+        itemName: "URAD GOTA SPECIAL (4 Items Ordered)", retailerName: "MANN ENTERPRISES", city: "JAORA",
+        qty: "866 Bags", tonnage: 32.0, itemValue: 3108000, statusTag: "Unpaid",
+        order: DATA_TODAY_ARRIVAL[3].order
+      },
+      {
+        id: "pay-4", sNo: 4, date: "03/09/2026", orderId: "ORD-2026-0846",
+        itemName: "MASOOR WHOLE PREMIUM (4 Items Ordered)", retailerName: "M.S.TRADERS", city: "MADURAI",
+        qty: "1,060 Bags", tonnage: 36.0, itemValue: 828000, statusTag: "Partial Due",
+        order: DATA_TODAY_ARRIVAL[5].order
+      },
+      {
+        id: "pay-5", sNo: 5, date: "05/09/2026", orderId: "ORD-2026-0848",
+        itemName: "CHANA DAL SUPER FINE (4 Items Ordered)", retailerName: "GLOBAL COMMODITIES", city: "AHMEDABAD",
+        qty: "1,400 Bags", tonnage: 48.0, itemValue: 2020000, statusTag: "Partial Due",
+        order: DATA_TODAY_ARRIVAL[7].order
+      },
+    ];
+
+    const DATA_COMPLETED = [
+      {
+        id: "comp-1", sNo: 1, date: "25/08/2026", orderId: "ORD-2026-0831",
+        itemName: "PREMIUM MOONG WHOLE 50KG", retailerName: "ROYAL AGRO TECH", city: "NAGPUR",
+        qty: "840 Bags", tonnage: 42.0, itemValue: 4450000, statusTag: "Delivered & Paid",
+        order: {
+          orderId: "ORD-2026-0831", orderDate: "15/08/2026", retailerName: "ROYAL AGRO TECH", city: "NAGPUR", state: "MAHARASHTRA",
+          totalTonnage: 42.0, totalValue: 4450000, paid: 4450000, balance: 0, paymentStatus: "Paid",
+          items: [
+            { no: 1, name: "PREMIUM MOONG WHOLE 50KG", qty: "400 Bags", tonnage: 20.0, rate: 105000, value: 2100000, date: "20/08/2026", status: "Arrived Earlier", trip: { vehicle: "MH 31 AA 5544", driver: "Dinesh Kadam", phone: "+91 98230 44556", transporter: "Vidarbha Express", lr: "VE-11029", dispatch: "18/08/2026", delivery: "20/08/2026", status: "Delivered", godown: "Central Godown - Unit 1", loading: "Nagpur Grain Mandi" } },
+            { no: 2, name: "TOOR DHALL PREMIUM 30KG", qty: "440 Bags", tonnage: 22.0, rate: 106818, value: 2350000, date: "25/08/2026", status: "Arrived Earlier", trip: { vehicle: "MH 31 BB 9988", driver: "Vinod Raut", phone: "+91 98230 99881", transporter: "Vidarbha Express", lr: "VE-11201", dispatch: "22/08/2026", delivery: "25/08/2026", status: "Delivered", godown: "Central Godown - Unit 1", loading: "Nagpur Grain Mandi" } },
+          ]
+        }
+      },
+      {
+        id: "comp-2", sNo: 2, date: "26/08/2026", orderId: "ORD-2026-0832",
+        itemName: "CHANA BOLD GRADE-1 30KG", retailerName: "GUJARAT GRAIN TRADERS", city: "SURAT",
+        qty: "870 Bags", tonnage: 38.5, itemValue: 3920000, statusTag: "Delivered & Paid",
+        order: {
+          orderId: "ORD-2026-0832", orderDate: "16/08/2026", retailerName: "GUJARAT GRAIN TRADERS", city: "SURAT", state: "GUJARAT",
+          totalTonnage: 38.5, totalValue: 3920000, paid: 3920000, balance: 0, paymentStatus: "Paid",
+          items: [
+            { no: 1, name: "CHANA BOLD GRADE-1 30KG", qty: "500 Bags", tonnage: 20.0, rate: 102000, value: 2040000, date: "22/08/2026", status: "Arrived Earlier", trip: { vehicle: "GJ 05 YY 4433", driver: "Ketan Desai", phone: "+91 98251 11223", transporter: "Surat Express Cargo", lr: "SEC-9021", dispatch: "19/08/2026", delivery: "22/08/2026", status: "Delivered", godown: "Western Regional Godown", loading: "Surat APMC" } },
+            { no: 2, name: "WHITE GRAM AA 30KG", qty: "370 Bags", tonnage: 18.5, rate: 101621, value: 1880000, date: "26/08/2026", status: "Arrived Earlier", trip: { vehicle: "GJ 05 ZZ 8877", driver: "Haresh Vala", phone: "+91 98251 55667", transporter: "Surat Express Cargo", lr: "SEC-9145", dispatch: "23/08/2026", delivery: "26/08/2026", status: "Delivered", godown: "Western Regional Godown", loading: "Surat APMC" } },
+          ]
+        }
+      },
+      {
+        id: "comp-3", sNo: 3, date: "27/08/2026", orderId: "ORD-2026-0833",
+        itemName: "URAD DHALL PREMIUM 30KG", retailerName: "MADURAI PULSES CORP", city: "MADURAI",
+        qty: "900 Bags", tonnage: 45.0, itemValue: 4860000, statusTag: "Delivered & Paid",
+        order: {
+          orderId: "ORD-2026-0833", orderDate: "18/08/2026", retailerName: "MADURAI PULSES CORP", city: "MADURAI", state: "TAMIL NADU",
+          totalTonnage: 45.0, totalValue: 4860000, paid: 4860000, balance: 0, paymentStatus: "Paid",
+          items: [
+            { no: 1, name: "URAD DHALL PREMIUM 30KG", qty: "450 Bags", tonnage: 22.5, rate: 108000, value: 2430000, date: "24/08/2026", status: "Arrived Earlier", trip: { vehicle: "TN 58 BB 1122", driver: "C. Alagarsamy", phone: "+91 94432 11223", transporter: "Pandian Freight", lr: "PF-44210", dispatch: "21/08/2026", delivery: "24/08/2026", status: "Delivered", godown: "South Zone Main Godown", loading: "Madurai Anuppanadi Yard" } },
+            { no: 2, name: "FRIED GRAM BULK 25KG", qty: "450 Bags", tonnage: 22.5, rate: 108000, value: 2430000, date: "27/08/2026", status: "Arrived Earlier", trip: { vehicle: "TN 58 CC 3344", driver: "M. Veeranan", phone: "+91 94432 66778", transporter: "Pandian Freight", lr: "PF-44390", dispatch: "24/08/2026", delivery: "27/08/2026", status: "Delivered", godown: "South Zone Main Godown", loading: "Madurai Anuppanadi Yard" } },
+          ]
+        }
+      },
+      {
+        id: "comp-4", sNo: 4, date: "28/08/2026", orderId: "ORD-2026-0834",
+        itemName: "TOOR DHALL DESI 50KG", retailerName: "INDORE GRAIN MILLS", city: "INDORE",
+        qty: "720 Bags", tonnage: 36.0, itemValue: 3780000, statusTag: "Delivered & Paid",
+        order: {
+          orderId: "ORD-2026-0834", orderDate: "19/08/2026", retailerName: "INDORE GRAIN MILLS", city: "INDORE", state: "MADHYA PRADESH",
+          totalTonnage: 36.0, totalValue: 3780000, paid: 3780000, balance: 0, paymentStatus: "Paid",
+          items: [
+            { no: 1, name: "TOOR DHALL DESI 50KG", qty: "360 Bags", tonnage: 18.0, rate: 105000, value: 1890000, date: "25/08/2026", status: "Arrived Earlier", trip: { vehicle: "MP 09 XY 7711", driver: "Deepak Chouhan", phone: "+91 98261 44556", transporter: "Malwa Express", lr: "ME-33109", dispatch: "22/08/2026", delivery: "25/08/2026", status: "Delivered", godown: "Central Godown - Unit 1", loading: "Indore Mandi" } },
+            { no: 2, name: "MASOOR WHOLE PREMIUM 50KG", qty: "360 Bags", tonnage: 18.0, rate: 105000, value: 1890000, date: "28/08/2026", status: "Arrived Earlier", trip: { vehicle: "MP 09 YY 9922", driver: "Rajesh Sahu", phone: "+91 98261 88990", transporter: "Malwa Express", lr: "ME-33240", dispatch: "25/08/2026", delivery: "28/08/2026", status: "Delivered", godown: "Central Godown - Unit 1", loading: "Indore Mandi" } },
+          ]
+        }
+      },
+    ];
+
+    /* ================= APP STATE ================= */
+    let activeFilter = "today_arrival"; // Default ALWAYS Today's Arrival
+    let pendingDrawerFilter = "today_arrival";
+    const expandedRows = {};
+
+    function formatCurrency(val) {
+      return "₹ " + Number(val || 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function formatTonnage(val) {
+      return Number(val || 0).toFixed(3) + " MT";
+    }
+
+    function getActiveDataset() {
+      switch (activeFilter) {
+        case "today_arrival": return DATA_TODAY_ARRIVAL;
+        case "pending_orders": return DATA_PENDING_ORDERS;
+        case "pending_payments": return DATA_PENDING_PAYMENTS;
+        case "completed": return DATA_COMPLETED;
+        default: return DATA_TODAY_ARRIVAL;
+      }
+    }
+
+    function getFilterMetadata() {
+      switch (activeFilter) {
+        case "today_arrival":
+          return {
+            title: "Purchase Report - Today's Arrival List",
+            badgeLabel: "Today's Arrival",
+            badge: `${DATA_TODAY_ARRIVAL.length} Arrival Items`,
+            totalLabel: `TOTAL ARRIVALS TODAY (${DATA_TODAY_ARRIVAL.length} Items)`
+          };
+        case "pending_orders":
+          return {
+            title: "Purchase Report - Pending Orders",
+            badgeLabel: "Pending Orders",
+            badge: `${DATA_PENDING_ORDERS.length} Pending Orders`,
+            totalLabel: `TOTAL PENDING ORDERS (${DATA_PENDING_ORDERS.length} Items)`
+          };
+        case "pending_payments":
+          return {
+            title: "Purchase Report - Pending Payments",
+            badgeLabel: "Pending Payments",
+            badge: `${DATA_PENDING_PAYMENTS.length} Pending Payments`,
+            totalLabel: `TOTAL PENDING PAYMENTS (${DATA_PENDING_PAYMENTS.length} Orders)`
+          };
+        case "completed":
+          return {
+            title: "Purchase Report - Completed Orders",
+            badgeLabel: "Completed",
+            badge: `${DATA_COMPLETED.length} Completed Orders`,
+            totalLabel: `TOTAL COMPLETED PURCHASES (${DATA_COMPLETED.length} Orders)`
+          };
+      }
+    }
+
+    /* ================= DRAWER LOGIC ================= */
+    function toggleDrawer() {
+      const panel = document.getElementById("filterDrawerPanel");
+      if (panel.classList.contains("open")) {
+        closeDrawer();
+      } else {
+        openDrawer();
+      }
+    }
+
+    function openDrawer() {
+      pendingDrawerFilter = activeFilter;
+      syncDrawerSelection();
+      document.getElementById("filterDrawerBackdrop").classList.add("active");
+      document.getElementById("filterDrawerPanel").classList.add("open");
+    }
+
+    function closeDrawer() {
+      document.getElementById("filterDrawerBackdrop").classList.remove("active");
+      document.getElementById("filterDrawerPanel").classList.remove("open");
+    }
+
+    function selectDrawerOption(filterType) {
+      activeFilter = filterType;
+      pendingDrawerFilter = filterType;
+      syncDrawerSelection();
+      renderTable(); // Changes immediately upon clicking the radio itself
+    }
+
+    function syncDrawerSelection() {
+      const options = ["today_arrival", "pending_orders", "pending_payments", "completed"];
+      options.forEach(opt => {
+        const el = document.getElementById("drawer-opt-" + opt);
+        if (el) {
+          if (opt === activeFilter) {
+            el.classList.add("selected");
+          } else {
+            el.classList.remove("selected");
+          }
+        }
+      });
+    }
+
+    function applyDrawerFilters() {
+      closeDrawer();
+    }
+
+    /* ================= ROW EXPANSION & TABLE RENDER ================= */
+    function toggleRow(id) {
+      expandedRows[id] = !expandedRows[id];
+      const parentRow = document.getElementById("row-" + id);
+      const childRow = document.getElementById("child-" + id);
+      if (parentRow && childRow) {
+        if (expandedRows[id]) {
+          parentRow.classList.add("expanded");
+          childRow.classList.add("open");
+        } else {
+          parentRow.classList.remove("expanded");
+          childRow.classList.remove("open");
+        }
+      }
+    }
+
+    function renderTable() {
+      const data = getActiveDataset();
+      const meta = getFilterMetadata();
+
+      // Update Header Text & Badges
+      document.getElementById("pageTitle").textContent = meta.title;
+      document.getElementById("titleCountBadge").textContent = meta.badge;
+      document.getElementById("activeFilterBadgeText").textContent = meta.badgeLabel;
+      document.getElementById("stickyTotalLabel").textContent = meta.totalLabel;
+      document.getElementById("paginationInfo").textContent = `1–${data.length} of ${data.length}`;
+
+      // Calculate Grand Totals
+      let totalTonnage = 0;
+      let totalValue = 0;
+      data.forEach(item => {
+        totalTonnage += item.tonnage;
+        totalValue += item.itemValue;
+      });
+
+      document.getElementById("stickyTotalTonnage").textContent = formatTonnage(totalTonnage);
+      document.getElementById("stickyTotalValue").textContent = formatCurrency(totalValue);
+
+      // Render Rows
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: #64748b;">No records found.</td></tr>`;
+        return;
+      }
+
+      data.forEach((row, idx) => {
+        // Tag badge HTML
+        let tagHtml = "";
+        if (row.statusTag) {
+          let tagClass = "tag-transit";
+          if (row.statusTag === "Pending Delivery") tagClass = "tag-pending-delivery";
+          else if (row.statusTag.includes("Due") || row.statusTag === "Unpaid") tagClass = "tag-due";
+          else if (row.statusTag.includes("Paid") || row.statusTag.includes("Completed")) tagClass = "tag-completed";
+          tagHtml = `<span class="status-tag ${tagClass}">${row.statusTag}</span>`;
+        }
+
+        // Parent Row
+        const trParent = document.createElement("tr");
+        trParent.className = `parent-row ${expandedRows[row.id] ? "expanded" : ""}`;
+        trParent.id = `row-${row.id}`;
+        trParent.onclick = () => toggleRow(row.id);
+
+        trParent.innerHTML = `
+          <td class="cell-center" style="width: 38px;">
+            <div class="chevron-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+          </td>
+          <td style="width: 55px; color: #64748b; font-weight: 600;">${row.sNo}</td>
+          <td style="width: 100px; color: #1e3a8a; font-weight: 600;">${row.date}</td>
+          <td style="width: 135px;"><span class="order-chip">${row.orderId}</span></td>
+          <td>
+            <span class="item-title">${row.itemName}</span>
+            ${tagHtml}
+          </td>
+          <td style="width: 230px;">
+            <span class="retailer-name">${row.retailerName},</span>
+            <span class="retailer-city">${row.city}</span>
+          </td>
+          <td class="cell-right tonnage-text" style="width: 120px;">${formatTonnage(row.tonnage)}</td>
+          <td class="cell-right value-text" style="width: 140px;">${formatCurrency(row.itemValue)}</td>
+        `;
+        tbody.appendChild(trParent);
+
+        // Child Collapsible Row
+        const trChild = document.createElement("tr");
+        trChild.className = `child-row ${expandedRows[row.id] ? "open" : ""}`;
+        trChild.id = `child-${row.id}`;
+
+        let subtableRowsHtml = "";
+        row.order.items.forEach((subItem, sIdx) => {
+          let badgeClass = "badge-in-transit";
+          if (subItem.status === "Arrived Today") badgeClass = "badge-arrived-today";
+          else if (subItem.status === "Arrived Earlier") badgeClass = "badge-arrived-earlier";
+          else if (subItem.status === "Pending Delivery") badgeClass = "badge-pending-delivery";
+
+          let tripHtml = (subItem.trip && subItem.status !== "Pending Delivery") ? `
+            <button class="trip-btn" onclick="event.stopPropagation(); openTripModal(${JSON.stringify(subItem.trip).replace(/"/g, '&quot;')}, '${row.orderId} - ${subItem.name}')">
+              🚚 Trip - ${sIdx + 1}
+            </button>
+          ` : `<span style="color: #94a3b8; font-weight: 600;">-</span>`;
+
+          const arrivalDateHtml = (subItem.date && subItem.date !== "-")
+            ? `<span style="font-weight: 600; color: ${subItem.status === 'Arrived Today' ? '#15803d' : '#334155'};">${subItem.date}</span>`
+            : `<span style="color: #94a3b8; font-weight: 600;">-</span>`;
+
+          subtableRowsHtml += `
+            <tr style="background-color: ${subItem.status === 'Arrived Today' ? '#f0fdf4' : 'inherit'};">
+              <td class="cell-center" style="color: #64748b;">${subItem.no}</td>
+              <td style="font-weight: 600; color: #0f172a;">${subItem.name}</td>
+              <td>${subItem.qty || "300 Bags"}</td>
+              <td class="cell-right" style="font-weight: 600;">${formatTonnage(subItem.tonnage)}</td>
+              <td class="cell-right">${formatCurrency(subItem.rate)}</td>
+              <td class="cell-right" style="font-weight: 700; color: #166534;">${formatCurrency(subItem.value)}</td>
+              <td class="cell-center">${arrivalDateHtml}</td>
+              <td class="cell-center"><span class="badge-status ${badgeClass}">${subItem.status}</span></td>
+              <td class="cell-center">${tripHtml}</td>
+            </tr>
+          `;
+        });
+
+        // Calculated average rate per MT
+        const averageRate = row.order.totalTonnage ? (row.order.totalValue / row.order.totalTonnage) : 0;
+
+        trChild.innerHTML = `
+          <td colspan="8" style="padding: 0; background-color: #f8fafc;">
+            <div class="expanded-container">
+              <!-- Summary Bar -->
+              <div class="order-summary-bar">
+                <div class="summary-left">
+                  <span>📄 <strong>Order: ${row.order.orderId}</strong></span>
+                  <span style="color: #64748b;">Booked: <strong>${row.order.orderDate}</strong></span>
+                  <span style="color: #64748b;">Retailer: <strong>${row.order.retailerName}</strong> (${row.order.city}, ${row.order.state})</span>
+                  <span class="count-chip">${row.order.items.length} Items Ordered</span>
+                </div>
+              </div>
+
+              <!-- Subtable -->
+              <div class="subtable-wrapper">
+                <table class="subtable">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px; text-align: center;">#</th>
+                      <th>Item Name</th>
+                      <th style="width: 100px;">Order Qty</th>
+                      <th style="width: 110px; text-align: right;">Tonnage</th>
+                      <th style="width: 110px; text-align: right;">Rate / MT</th>
+                      <th style="width: 130px; text-align: right;">Item Value</th>
+                      <th style="width: 110px; text-align: center;">Arrival Date</th>
+                      <th style="width: 130px; text-align: center;">Delivery Status</th>
+                      <th style="width: 100px; text-align: center;">Trip Info</th>
+                    </tr>
+                    <!-- Total Subtable Row with Average Rate -->
+                    <tr style="background-color: #f1f5f9; font-weight: 800; font-size: 0.74rem;">
+                      <td colspan="3" style="color: #1e3a8a; font-weight: 800;">TOTAL ORDER (${row.order.items.length} Items)</td>
+                      <td class="cell-right" style="font-weight: 800;">${formatTonnage(row.order.totalTonnage)}</td>
+                      <td class="cell-right" style="font-weight: 700; color: #475569;">${formatCurrency(averageRate)}</td>
+                      <td class="cell-right" style="font-weight: 800; color: #166534;">${formatCurrency(row.order.totalValue)}</td>
+                      <td colspan="3" class="cell-center" style="color: #475569; font-size: 0.72rem;">
+                        Paid: <strong>${formatCurrency(row.order.paid)}</strong> | Balance: <strong style="color: ${row.order.balance > 0 ? '#dc2626' : '#166534'}">${formatCurrency(row.order.balance)}</strong>
+                      </td>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${subtableRowsHtml}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(trChild);
+      });
+    }
+
+    /* ================= TRIP MODAL LOGIC ================= */
+    function openTripModal(trip, refText) {
+      document.getElementById("modalRefText").textContent = "Ref: " + refText;
+      document.getElementById("modalVehicleNo").textContent = trip.vehicle || "MP 09 GH 4521";
+      document.getElementById("modalStatus").textContent = trip.status || "Delivered";
+      document.getElementById("modalTransporter").textContent = trip.transporter || "Swastik Roadlines";
+      document.getElementById("modalLrNo").textContent = trip.lr || "SW-89211";
+      document.getElementById("modalDriverName").textContent = trip.driver || "Ramesh Sharma";
+      document.getElementById("modalDriverPhone").textContent = trip.phone || "+91 98260 12345";
+      document.getElementById("modalDispatchDate").textContent = trip.dispatch || "09/09/2026";
+      document.getElementById("modalDeliveryDate").textContent = trip.status === "Delivered" 
+        ? "Delivered: " + (trip.delivery || "12/09/2026")
+        : "Expected Arrival: " + (trip.delivery || "15/09/2026");
+      document.getElementById("modalDeliveryDate").style.color = trip.status === "Delivered" ? "#166534" : "#b45309";
+      document.getElementById("modalLoadingPoint").textContent = trip.loading || "Indore Mandi";
+      document.getElementById("modalDestinationGodown").textContent = trip.godown || "Central Godown - Unit 1";
+
+      document.getElementById("tripModal").classList.add("active");
+    }
+
+    function closeTripModal() {
+      document.getElementById("tripModal").classList.remove("active");
+    }
+
+    function closeModal(e) {
+      if (e.target.id === "tripModal") {
+        closeTripModal();
+      }
+    }
+
+    // INITIAL RENDER ON PAGE LOAD (Today's Arrival default)
+    window.addEventListener("DOMContentLoaded", () => {
+      renderTable();
+    });
+  </script>
+</body>
+</html>
