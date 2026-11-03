@@ -84,7 +84,7 @@ export const adminunitEconomicsReport = async (req, res) => {
             .input("Todate", toDate)
             .query(`EXEC Reporting_Online_Admin_Unit_Eco_VW @Fromdate, @Todate`);
 
-        const [rows, meta] = result.recordsets || [];
+        const [rows, lolFields, meta] = result.recordsets || [];
 
         if (!rows || rows.length === 0) {
             return noData(res);
@@ -92,7 +92,9 @@ export const adminunitEconomicsReport = async (req, res) => {
 
         dataFound(res, {
             rows,
-            lastStockValueDate: meta?.[0] ?? null
+            lolFields: lolFields ?? [],
+            lastStockValueDate: meta?.[0] ?? null,
+
         });
 
     } catch (error) {
