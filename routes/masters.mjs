@@ -7,6 +7,7 @@ import lollos from '../controller/Masters/lollos.mjs';
 import users from '../controller/Masters/users.mjs';
 import reportsUserRights from '../controller/Masters/reportsUserRights.mjs';
 import userType from '../controller/Masters/userType.mjs';
+import accountingGroup from '../controller/Masters/AccountingGroup.mjs';
 
 const MastersRouter = express.Router();
 
@@ -25,6 +26,7 @@ MastersRouter.get('/los', lollos.loslist);
 MastersRouter.get('/getUser', users.getUsers);
 MastersRouter.get('/userdropdown', users.userDropdown);
 MastersRouter.get('/userType', userType.getUserType);
+MastersRouter.get('/accountingGroup', accountingGroup.getAccountingGroup);
 
 MastersRouter.get('/reportsUserRights', reportsUserRights.getReportsUserRights);
 MastersRouter.post('/reportsUserRights', reportsUserRights.createReportsUserRights);

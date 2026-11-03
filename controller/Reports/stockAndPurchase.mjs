@@ -136,10 +136,15 @@ const StockAndPurchaseReport = () => {
 
                 const mergeDataType = [...columnDataTypes, ...uniqueKeys]
 
+                const daySalesMap = new Map();
+                for (const ds of dayWiseSales) {
+                    daySalesMap.set(Number(ds?.sales_party_ledger_id), ds);
+                }
+
                 const mergeData = (Array.isArray(result.recordsets[0]) ? result.recordsets[0] : []).map(o => ({
                     ...o,
-                    ...dayWiseSales.find(daySales => isEqualNumber(daySales?.sales_party_ledger_id, o?.Ledger_Tally_Id))
-                }))
+                    ...(daySalesMap.get(Number(o?.Ledger_Tally_Id)) || {})
+                }));
                 dataFound(res, mergeData, 'dataFound', {
                     dataTypeInfo: mergeDataType,
                     // daysTransactions: dayWiseSales
@@ -176,10 +181,15 @@ const StockAndPurchaseReport = () => {
 
                 const mergeDataType = [...columnDataTypes, ...uniqueKeys]
 
+                const daySalesMap = new Map();
+                for (const ds of dayWiseSales) {
+                    daySalesMap.set(Number(ds?.sales_party_ledger_id), ds);
+                }
+
                 const mergeData = (Array.isArray(result.recordsets[0]) ? result.recordsets[0] : []).map(o => ({
                     ...o,
-                    ...dayWiseSales.find(daySales => isEqualNumber(daySales?.sales_party_ledger_id, o?.Ledger_Tally_Id))
-                }))
+                    ...(daySalesMap.get(Number(o?.Ledger_Tally_Id)) || {})
+                }));
                 dataFound(res, mergeData, 'dataFound', {
                     dataTypeInfo: mergeDataType,
                     // daysTransactions: dayWiseSales
@@ -232,19 +242,18 @@ const StockAndPurchaseReport = () => {
                 const losAbs = Array.isArray(result.recordsets[1]) ? result.recordsets[1] : [];
                 const dayBasedSales = Array.isArray(result.recordsets[2]) ? result.recordsets[2] : [];
 
-                const mergedItemWithDayBasedSales = itemSales.map(item => {
-                    const daysWithSales = dayBasedSales.find(
-                        day => (
-                            day.Item_Name_Modified === item.Item_Name_Modified
-                            && day.Stock_Group === item.Stock_Group
-                        )
-                    )
+                const daySalesMap = new Map();
+                for (const day of dayBasedSales) {
+                    daySalesMap.set(`${day.Item_Name_Modified}___${day.Stock_Group}`, day);
+                }
 
+                const mergedItemWithDayBasedSales = itemSales.map(item => {
+                    const daysWithSales = daySalesMap.get(`${item.Item_Name_Modified}___${item.Stock_Group}`) || {};
                     return {
                         ...item,
                         ...daysWithSales
-                    }
-                })
+                    };
+                });
 
                 dataFound(res, mergedItemWithDayBasedSales, 'dataFound', {
                     LOSAbstract: losAbs,

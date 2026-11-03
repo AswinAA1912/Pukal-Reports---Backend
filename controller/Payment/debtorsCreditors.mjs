@@ -118,13 +118,15 @@ const DebitorsCreditors = () => {
 		            AND am.Group_Id IN (select Group_Id from RecursiveGroups rg)`;
 
             const result2 = await new sql.Request().query(query2);
-            const accountTypes = result2.recordset;
+            const accountTypes = result2.recordset || [];
 
+            const accTypeMap = new Map();
+            for (const at of accountTypes) {
+                accTypeMap.set(String(at.Acc_Id), at);
+            }
 
             const merged = balances.map((bal) => {
-                const accType = accountTypes.find(
-                    (at) => String(at.Acc_Id) === String(bal.Acc_Id)
-                );
+                const accType = accTypeMap.get(String(bal.Acc_Id));
                 return {
                     ...bal,
                     Account_Types: accType ? accType.Account_Types : null,

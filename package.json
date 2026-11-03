@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/*.test.mjs",
     "dev": "nodemon app.mjs",
     "start": "node --max-old-space-size=4096 app.mjs",
     "import": "node import.js"
@@ -23,6 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "compression": "^1.8.2",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "crypto-js": "^4.2.0",
@@ -48,6 +49,8 @@
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
     "@types/mssql": "^9.1.5",
-    "nodemon": "^3.1.4"
+    "docx": "^9.13.0",
+    "nodemon": "^3.1.4",
+    "supertest": "^7.3.1"
   }
 }

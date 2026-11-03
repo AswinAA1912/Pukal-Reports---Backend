@@ -1576,7 +1576,7 @@ export const TransactionBatchStockReportByProIdandGodownId = async (req, res) =>
             retryRequest.input("Batch", sql.NVarChar(100), alternativeBatch);
 
             const retryResult = await retryRequest.query(
-                `EXEC Transaction_Batch_Stock_Report_vw_By_Pro_Id_And_Godown_Id @Fromdate, @Todate, @Product_Id, @Godown_Id @Batch`
+                `EXEC Transaction_Batch_Stock_Report_vw_By_Pro_Id_And_Godown_Id @Fromdate, @Todate, @Product_Id, @Godown_Id, @Batch`
             );
             recordset = retryResult.recordset ?? [];
         }
@@ -1681,8 +1681,28 @@ export const PurchaseOrderPaymentReport = async (req, res) => {
     }
 };
 
+export const AccountingOutstadingReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate, Group_Id } = req.query;
 
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+        const groupId = Group_Id !== undefined && Group_Id !== null && String(Group_Id).trim() !== ''
+            ? Number(Group_Id)
+            : 0;
 
+        const request = new sql.Request();
+        request.input('Fromdate', sql.VarChar(50), fromDate);
+        request.input('Todate', sql.VarChar(50), toDate);
+        request.input('Group_Id', sql.BigInt, isNaN(groupId) ? 0 : groupId);
 
+        const result = await request.execute('Reporting_Account_Transactions_ALL_VW');
 
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
 
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};

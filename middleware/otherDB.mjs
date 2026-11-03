@@ -85,6 +85,17 @@ const dbconnect = async (req, res, next) => {
   }
 
 
+  // Check in-memory connection pool cache first to avoid redundant database lookup on every request
+  let cachedPool = connectionPools.get(Db);
+  if (cachedPool && cachedPool.connected) {
+    req.db = cachedPool;
+    req.dbID = Db;
+    req.config = cachedPool._pukalConfig || {};
+    return asyncLocalStorage.run(cachedPool, () => {
+      next();
+    });
+  }
+
   let config = {
     driver: "SQL Server",
     stream: false,
@@ -154,7 +165,7 @@ const dbconnect = async (req, res, next) => {
     // 3. Retrieve or create cached connection pool
     let activePool = connectionPools.get(Db);
 
-    if (!activePool) {
+    if (!activePool || !activePool.connected) {
       let pool = new sql.ConnectionPool(config);
       try {
         activePool = await pool.connect();
@@ -208,6 +219,7 @@ const dbconnect = async (req, res, next) => {
         connectionPools.delete(Db);
       });
 
+      activePool._pukalConfig = config;
       connectionPools.set(Db, activePool);
     }
 

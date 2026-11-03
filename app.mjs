@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import cors from 'cors';
+import compression from 'compression';
 import indexRouter from './routes/index.mjs';
 import morgan from 'morgan';
 import fs from 'fs';
@@ -29,6 +30,13 @@ const allowedOrigins = [
 ];
 
 const app = express();
+
+// High-speed response compression (Gzip / Deflate / Brotli) to minimize payload transfer times
+app.use(compression({
+    level: 6,
+    threshold: 1024
+}));
+
 app.use(
     cors({
         // origin: (origin, callback) => {
@@ -78,6 +86,15 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 9001;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+const isMain = process.argv[1] && (
+    fileURLToPath(import.meta.url) === path.resolve(process.argv[1]) ||
+    process.argv[1].endsWith('app.mjs')
+);
+
+if (isMain && process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}
+
+export default app;

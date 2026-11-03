@@ -2300,44 +2300,63 @@ ORDER BY llos.Pro_Id;
                 return noData(res);
             }
 
-            // Process and combine the data
+            // Pre-index collections into Maps for O(1) lookups to avoid O(N*M*N) latency
+            const orderMap = new Map();
+            for (const order of OrderData) {
+                orderMap.set(Number(order.So_Id), order);
+            }
+
+            const orderProductsMap = new Map();
+            for (const p of ProductDetails) {
+                const k = Number(p.Sales_Order_Id);
+                if (!orderProductsMap.has(k)) orderProductsMap.set(k, []);
+                orderProductsMap.get(k).push(p);
+            }
+
+            const staffInvolvedMap = new Map();
+            for (const s of StaffInvolved) {
+                const k = Number(s.So_Id);
+                if (!staffInvolvedMap.has(k)) staffInvolvedMap.set(k, []);
+                staffInvolvedMap.get(k).push(s);
+            }
+
+            const deliveryItemsMap = new Map();
+            for (const item of DeliveryItems) {
+                const k = Number(item.Delivery_Order_Id);
+                if (!deliveryItemsMap.has(k)) deliveryItemsMap.set(k, []);
+                deliveryItemsMap.get(k).push(item);
+            }
+
+            // Map each Delivery Order ID to its Sales Order No
+            const doToSoMap = new Map();
+            for (const d of DeliveryData) {
+                doToSoMap.set(Number(d.Do_Id), Number(d.So_No));
+            }
+
+            // Pre-aggregate total delivered quantity per Sales Order No
+            const deliveredQtyBySoMap = new Map();
+            for (const item of DeliveryItems) {
+                const soNo = doToSoMap.get(Number(item.Delivery_Order_Id));
+                if (soNo !== undefined) {
+                    deliveredQtyBySoMap.set(soNo, (deliveredQtyBySoMap.get(soNo) || 0) + toNumber(item.Bill_Qty));
+                }
+            }
+
+            // Process and combine the data in linear O(N) time
             const processedData = DeliveryData.map(delivery => {
-                // Find related sales order
-                const relatedOrder = OrderData.find(order =>
-                    isEqualNumber(order.So_Id, delivery.So_No)
-                ) || {};
+                const soNo = Number(delivery.So_No);
+                const doId = Number(delivery.Do_Id);
 
-                // Find order products for this sales order
-                const orderProducts = ProductDetails.filter(p =>
-                    isEqualNumber(p.Sales_Order_Id, delivery.So_No)
-                );
+                const relatedOrder = orderMap.get(soNo) || {};
+                const orderProducts = orderProductsMap.get(soNo) || [];
+                const staffInvolved = staffInvolvedMap.get(soNo) || [];
+                const deliveryItems = deliveryItemsMap.get(doId) || [];
 
-                // Find staff involved for this sales order
-                const staffInvolved = StaffInvolved.filter(s =>
-                    isEqualNumber(s.So_Id, delivery.So_No)
-                );
-
-                // Get delivery items for this specific delivery
-                const deliveryItems = DeliveryItems.filter(item =>
-                    isEqualNumber(item.Delivery_Order_Id, delivery.Do_Id)
-                );
-
-                // Calculate totals
                 const totalOrderedQty = orderProducts.reduce(
                     (sum, p) => sum + toNumber(p.Bill_Qty),
                     0
                 );
-
-                const totalDeliveredQty = DeliveryItems.filter(item => {
-                    const itemDelivery = DeliveryData.find(d =>
-                        isEqualNumber(d.Do_Id, item.Delivery_Order_Id)
-                    );
-                    return itemDelivery && isEqualNumber(itemDelivery.So_No, delivery.So_No);
-                }).reduce(
-                    (sum, item) => sum + toNumber(item.Bill_Qty),
-                    0
-                );
-
+                const totalDeliveredQty = deliveredQtyBySoMap.get(soNo) || 0;
                 const orderStatus = totalDeliveredQty >= totalOrderedQty ? "completed" : "pending";
 
                 return {

@@ -70,18 +70,17 @@ const getStorageStockItemWise = async (req, res) => {
             );
 
         const productLosResult = (await getProductLosData).recordset;
+        const productLosMap = new Map();
+        for (const p of productLosResult) {
+            productLosMap.set(Number(p.Product_Id), p);
+        }
 
         const mergeLosData = filteredData.map(row => {
             const {
                 Product_Rate = 0, Stock_Item = '', Group_ST = '', Bag = '',
                 Stock_Group = '', S_Sub_Group_1 = '', Grade_Item_Group = '',
                 Item_Name_Modified = ''
-            } = productLosResult.find(
-                productDetails => isEqualNumber(
-                    productDetails.Product_Id,
-                    row?.Product_Id
-                )
-            ) || {};
+            } = productLosMap.get(Number(row?.Product_Id)) || {};
 
             return {
                 ...row,
@@ -168,18 +167,17 @@ const getStorageStockGodownWise = async (req, res) => {
             );
 
         const productLosResult = (await getProductLosData).recordset;
+        const productLosMap = new Map();
+        for (const p of productLosResult) {
+            productLosMap.set(Number(p.Product_Id), p);
+        }
 
         const mergeLosData = filteredData.map(row => {
             const {
                 Product_Rate = 0, Stock_Item = '', Group_ST = '', Bag = '',
                 Stock_Group = '', S_Sub_Group_1 = '', Grade_Item_Group = '',
                 Item_Name_Modified = '', CL_Rate = 0
-            } = productLosResult.find(
-                productDetails => isEqualNumber(
-                    productDetails.Product_Id,
-                    row?.Product_Id
-                )
-            ) || {};
+            } = productLosMap.get(Number(row?.Product_Id)) || {};
 
             return {
                 ...row,
@@ -246,16 +244,15 @@ const getStorageStockGodownWiseForMobile = async (req, res) => {
             );
 
         const productLosResult = getProductLosData.recordset;
+        const productLosMap = new Map();
+        for (const p of productLosResult) {
+            productLosMap.set(Number(p.Product_Id), p);
+        }
 
         const mergeLosData = filteredData.map(row => {
             const {
                 Product_Rate = 0,
-            } = productLosResult.find(
-                productDetails => isEqualNumber(
-                    productDetails.Product_Id,
-                    row?.Product_Id
-                )
-            ) || {};
+            } = productLosMap.get(Number(row?.Product_Id)) || {};
 
             return {
                 ...row,

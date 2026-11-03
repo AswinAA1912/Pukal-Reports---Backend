@@ -32,6 +32,7 @@ import {
     PurchaseOrderTripItemDetails,
     onlinePurchaseReportItemByOrderId,
     PurchaseOrderPaymentReport,
+    AccountingOutstadingReport,
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -115,6 +116,7 @@ ReportRouter.get('/externalAPI/transactionBatchStockReportByProId', TransactionB
 ReportRouter.get('/externalAPI/transactionBatchStockReportByProIdandGodownId', TransactionBatchStockReportByProIdandGodownId);
 ReportRouter.get('/externalAPI/purchaseOrderTripItemDetails', PurchaseOrderTripItemDetails);
 ReportRouter.get('/externalAPI/purchaseOrderPayment', PurchaseOrderPaymentReport);
+ReportRouter.get('/externalAPI/accountingOutstanding', AccountingOutstadingReport);
 
 // settings reports
 ReportRouter.get('/settings/MenuSettings', MenuSettings);
