@@ -64,6 +64,10 @@ import {
     PurchaseOrderTripItemService,
     PurchaseOrderTripItem,
 } from "../../services/purchaseOrderTripItem.service";
+import {
+    PurchasePaymentOnlineService,
+    PurchasePaymentListItem,
+} from "../../services/purchasePaymentOnline.service";
 
 /* ================= COMPONENT ================= */
 
@@ -166,6 +170,9 @@ const PurchaseDelivery: React.FC = () => {
     const [selectedItemForDialog, setSelectedItemForDialog] = useState<PurchaseDeliveryItem | null>(null);
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
     const [dialogInitialTab, setDialogInitialTab] = useState<number>(0);
+
+    // Online Purchase Payment Map (keyed by transId / PIN_Id) from Reporting_Online_Purchase_Payment_List
+    const [onlinePaymentMap, setOnlinePaymentMap] = useState<Record<string, PurchasePaymentListItem[]>>({});
 
     const handleOpenDetails = (it: PurchaseDeliveryItem, tab: number = 0) => {
         setSelectedItemForDialog(it);
@@ -364,6 +371,8 @@ const PurchaseDelivery: React.FC = () => {
 
                         const batchStr = item.Batch ? String(item.Batch).trim() : (matchedTrip?.Batch_No ? String(matchedTrip.Batch_No).trim() : "-");
                         const tonnageStr = qty > 0 ? formatKgQuantity(qty) : "-";
+                        const itemTripId = matchedTrip?.Trip_Id || (item as any).Trip_Id || (item as any).tripId;
+                        const itemTransId = item.Trans_Id || (item as any).trans_id || (item as any).PIN_Id || (item as any).pin_id || (matchedTrip as any)?.OrderId;
 
                         return {
                             id: `pd-live-${item.invoice_no || idx}-${idx + 1}`,
@@ -385,6 +394,8 @@ const PurchaseDelivery: React.FC = () => {
                             retailerName: item.Retailer_Name || item.Party_Name || "-",
                             partyAddress: item.Reatailer_Address || item.Party_Address || "-",
                             remarks: item.Narration || "-",
+                            tripId: itemTripId,
+                            transId: itemTransId ? String(itemTransId) : undefined,
                         };
                     });
 
@@ -404,6 +415,8 @@ const PurchaseDelivery: React.FC = () => {
                         const inwardJous: string[] = [];
                         const invNos: string[] = [];
                         const batches: string[] = [];
+                        const tripIds: (string | number)[] = [];
+                        const transIds: (string | number)[] = [];
                         let sumPaid = 0;
                         let allDone = rows.length > 0;
 
@@ -417,6 +430,12 @@ const PurchaseDelivery: React.FC = () => {
                             }
                             if (r.batch && r.batch !== "-" && !batches.includes(r.batch)) {
                                 batches.push(r.batch);
+                            }
+                            if (r.tripId && !tripIds.includes(r.tripId)) {
+                                tripIds.push(r.tripId);
+                            }
+                            if (r.transId && !transIds.includes(r.transId)) {
+                                transIds.push(r.transId);
                             }
                             if (r.paymentAmt) sumPaid += parseNum(r.paymentAmt);
                             if (r.status !== "COMPLETED") allDone = false;
@@ -457,6 +476,10 @@ const PurchaseDelivery: React.FC = () => {
                             allInwardJous: inwardJous,
                             allPurInvNos: invNos,
                             allPaymentNos: [],
+                            tripId: tripIds[0] || (first as any).tripId,
+                            allTripIds: tripIds,
+                            transId: transIds[0] ? String(transIds[0]) : (first as any).transId,
+                            allTransIds: transIds,
                             poItems: livePoItems,
                         });
                     });
@@ -663,6 +686,65 @@ const PurchaseDelivery: React.FC = () => {
         const start = (page - 1) * rowsPerPage;
         return filteredData.slice(start, start + rowsPerPage);
     }, [filteredData, page, rowsPerPage]);
+
+    // Fetch live Purchase Payment List for visible paginated rows from Reporting_Online_Purchase_Payment_List
+    useEffect(() => {
+        let isMounted = true;
+        const candidateTransIds = new Set<string>();
+
+        paginatedData.forEach((row) => {
+            const inspect = (val: any) => {
+                if (val === undefined || val === null || val === "" || val === "-") return;
+                const str = String(val).trim();
+                if (/^\d+$/.test(str) && Number(str) > 0) {
+                    candidateTransIds.add(str);
+                    return;
+                }
+                const match = str.match(/\d+$/);
+                if (match && match[0] && Number(match[0]) > 0) {
+                    candidateTransIds.add(match[0]);
+                }
+            };
+
+            inspect(row.transId);
+            inspect((row as any).Trans_Id);
+            inspect((row as any).PIN_Id);
+            inspect(row.purInvNo);
+            (row.allTransIds || []).forEach(inspect);
+            (row.allPurInvNos || []).forEach(inspect);
+        });
+
+        const unCachedIds = Array.from(candidateTransIds).filter((tId) => !onlinePaymentMap[tId]);
+        if (unCachedIds.length === 0) return;
+
+        Promise.allSettled(
+            unCachedIds.map((tId) =>
+                PurchasePaymentOnlineService.getPurchasePaymentList(tId).then((res) => ({
+                    transId: tId,
+                    data: res.data?.data,
+                }))
+            )
+        )
+            .then((results) => {
+                if (!isMounted) return;
+                const newMap: Record<string, PurchasePaymentListItem[]> = {};
+                results.forEach((r) => {
+                    if (r.status === "fulfilled" && r.value.data) {
+                        newMap[r.value.transId] = Array.isArray(r.value.data) ? r.value.data : [];
+                    }
+                });
+                if (Object.keys(newMap).length > 0) {
+                    setOnlinePaymentMap((prev) => ({ ...prev, ...newMap }));
+                }
+            })
+            .catch((err) => {
+                console.warn("Could not fetch purchase payments:", err);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [paginatedData, onlinePaymentMap]);
 
     // Reset filters
     const handleResetFilters = () => {
@@ -1740,7 +1822,12 @@ const PurchaseDelivery: React.FC = () => {
 
                                                 {/* PAYMENT INVOICE */}
                                                 <TableCell
-                                                    align={row.paymentCount && row.paymentCount > 1 ? "center" : "left"}
+                                                    align={(() => {
+                                                        const rowTransId = row.transId ? String(row.transId).trim() : "";
+                                                        const livePayments = rowTransId ? onlinePaymentMap[rowTransId] : undefined;
+                                                        const count = livePayments ? livePayments.length : (row.paymentCount || (row.paymentNo && row.paymentNo !== "-" ? 1 : 0));
+                                                        return count > 1 ? "center" : "left";
+                                                    })()}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleOpenDetails(row, 3);
@@ -1756,55 +1843,121 @@ const PurchaseDelivery: React.FC = () => {
                                                         },
                                                     }}
                                                 >
-                                                    {row.paymentNo && row.paymentNo !== "-" ? (
-                                                        <Tooltip
-                                                            title={`Open Payment Tab: Payments (${row.paymentCount || 1}): ${row.allPaymentNos && row.allPaymentNos.length > 0 ? row.allPaymentNos.join(", ") : row.paymentNo}`}
-                                                            arrow
-                                                            placement="top-start"
-                                                        >
-                                                            {row.paymentCount && row.paymentCount > 1 ? (
-                                                                <Chip
-                                                                    size="small"
-                                                                    label={`${row.paymentCount} Payments`}
-                                                                    sx={{
-                                                                        fontSize: "0.70rem",
-                                                                        fontWeight: 700,
-                                                                        height: 20,
-                                                                        bgcolor: "#faf5ff",
-                                                                        color: "#7e22ce",
-                                                                        border: "1px solid #e9d5ff",
-                                                                        cursor: "pointer",
-                                                                        "&:hover": {
-                                                                            bgcolor: "#f3e8ff",
-                                                                            borderColor: "#d8b4fe",
-                                                                        },
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <Typography
-                                                                    sx={{
-                                                                        fontWeight: 600,
-                                                                        color: "#7e22ce",
-                                                                        fontSize: "0.76rem",
-                                                                        whiteSpace: "nowrap",
-                                                                        overflow: "hidden",
-                                                                        textOverflow: "ellipsis",
-                                                                        display: "block",
-                                                                        cursor: "pointer",
-                                                                        "&:hover": {
-                                                                            color: "#9333ea",
-                                                                        },
-                                                                    }}
+                                                    {(() => {
+                                                        const rowTransId = row.transId ? String(row.transId).trim() : "";
+                                                        const livePayments = rowTransId ? onlinePaymentMap[rowTransId] : undefined;
+
+                                                        if (livePayments && livePayments.length > 0) {
+                                                            if (livePayments.length > 1) {
+                                                                return (
+                                                                    <Tooltip
+                                                                        title={`Payments (${livePayments.length}): ${livePayments.map((p) => `${p.Invoice_no} (${p.Particulars})`).join(", ")}`}
+                                                                        arrow
+                                                                        placement="top-start"
+                                                                    >
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label={`${livePayments.length} Payments`}
+                                                                            sx={{
+                                                                                fontSize: "0.70rem",
+                                                                                fontWeight: 700,
+                                                                                height: 20,
+                                                                                bgcolor: "#faf5ff",
+                                                                                color: "#7e22ce",
+                                                                                border: "1px solid #e9d5ff",
+                                                                                cursor: "pointer",
+                                                                                "&:hover": {
+                                                                                    bgcolor: "#f3e8ff",
+                                                                                    borderColor: "#d8b4fe",
+                                                                                },
+                                                                            }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                );
+                                                            } else {
+                                                                const singlePay = livePayments[0];
+                                                                return (
+                                                                    <Tooltip
+                                                                        title={`Payment: ${singlePay.Invoice_no} • Date: ${singlePay.Trans_Date ? dayjs(singlePay.Trans_Date).format("DD/MM/YYYY") : "-"} • Amt: ₹ ${Number(singlePay.Dr_Amount || singlePay.Cr_Amount || 0).toLocaleString("en-IN")}`}
+                                                                        arrow
+                                                                        placement="top-start"
+                                                                    >
+                                                                        <Typography
+                                                                            sx={{
+                                                                                fontWeight: 600,
+                                                                                color: "#7e22ce",
+                                                                                fontSize: "0.76rem",
+                                                                                whiteSpace: "nowrap",
+                                                                                overflow: "hidden",
+                                                                                textOverflow: "ellipsis",
+                                                                                display: "block",
+                                                                                cursor: "pointer",
+                                                                                "&:hover": {
+                                                                                    color: "#9333ea",
+                                                                                },
+                                                                            }}
+                                                                        >
+                                                                            {singlePay.Invoice_no}
+                                                                        </Typography>
+                                                                    </Tooltip>
+                                                                );
+                                                            }
+                                                        }
+
+                                                        if (row.paymentNo && row.paymentNo !== "-") {
+                                                            return (
+                                                                <Tooltip
+                                                                    title={`Open Payment Tab: Payments (${row.paymentCount || 1}): ${row.allPaymentNos && row.allPaymentNos.length > 0 ? row.allPaymentNos.join(", ") : row.paymentNo}`}
+                                                                    arrow
+                                                                    placement="top-start"
                                                                 >
-                                                                    {row.paymentNo}
-                                                                </Typography>
-                                                            )}
-                                                        </Tooltip>
-                                                    ) : (
-                                                        <Tooltip title="Open Payment Tab" arrow placement="top">
-                                                            <Typography sx={{ fontSize: "0.76rem", color: "#94a3b8", cursor: "pointer" }}>-</Typography>
-                                                        </Tooltip>
-                                                    )}
+                                                                    {row.paymentCount && row.paymentCount > 1 ? (
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label={`${row.paymentCount} Payments`}
+                                                                            sx={{
+                                                                                fontSize: "0.70rem",
+                                                                                fontWeight: 700,
+                                                                                height: 20,
+                                                                                bgcolor: "#faf5ff",
+                                                                                color: "#7e22ce",
+                                                                                border: "1px solid #e9d5ff",
+                                                                                cursor: "pointer",
+                                                                                "&:hover": {
+                                                                                    bgcolor: "#f3e8ff",
+                                                                                    borderColor: "#d8b4fe",
+                                                                                },
+                                                                            }}
+                                                                        />
+                                                                    ) : (
+                                                                        <Typography
+                                                                            sx={{
+                                                                                fontWeight: 600,
+                                                                                color: "#7e22ce",
+                                                                                fontSize: "0.76rem",
+                                                                                whiteSpace: "nowrap",
+                                                                                overflow: "hidden",
+                                                                                textOverflow: "ellipsis",
+                                                                                display: "block",
+                                                                                cursor: "pointer",
+                                                                                "&:hover": {
+                                                                                    color: "#9333ea",
+                                                                                },
+                                                                            }}
+                                                                        >
+                                                                            {row.paymentNo}
+                                                                        </Typography>
+                                                                    )}
+                                                                </Tooltip>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <Tooltip title="Open Payment Tab" arrow placement="top">
+                                                                <Typography sx={{ fontSize: "0.76rem", color: "#94a3b8", cursor: "pointer" }}>-</Typography>
+                                                            </Tooltip>
+                                                        );
+                                                    })()}
                                                 </TableCell>
 
                                                 {/* STATUS */}

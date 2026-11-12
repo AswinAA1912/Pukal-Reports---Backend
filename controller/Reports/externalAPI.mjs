@@ -1708,3 +1708,194 @@ export const AccountingOutstadingReport = async (req, res) => {
         servError(error, res);
     }
 };
+
+
+export const ReportingOnlineTripArrivalList = async (req, res) => {
+    try {
+        const rawTripId = req.query.Trip_Id ?? req.query.trip_id ?? req.query.TripId ?? req.body?.Trip_Id ?? req.body?.trip_id;
+
+        const Trip_Id = rawTripId !== undefined && rawTripId !== null
+            ? String(rawTripId).trim().replace(/^["']+|["']+$/g, "").trim()
+            : "";
+
+        if (!Trip_Id) {
+            return invalidInput(res, "Trip_Id is required");
+        }
+
+        const request = new sql.Request();
+        request.input("Trip_Id", sql.VarChar(100), Trip_Id);
+
+        const result = await request.query("EXEC Reporting_Online_Trip_Arrival_List @Trip_Id");
+
+        const [details = [], staffDetails = []] = result.recordsets || [];
+
+        if ((!details || details.length === 0) && (!staffDetails || staffDetails.length === 0)) {
+            return noData(res, "No arrival trip details found for given Trip_Id");
+        }
+
+        dataFound(res, {
+            details,
+            staffDetails
+        });
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const ReportingOnlinePurchaseList = async (req, res) => {
+    try {
+        const rawTransId = req.query.Trans_Id ?? req.query.trans_id ?? req.query.TransId ?? req.query.PIN_Id ?? req.query.pin_id ?? req.body?.Trans_Id ?? req.body?.trans_id;
+
+        const Trans_Id = rawTransId !== undefined && rawTransId !== null
+            ? String(rawTransId).trim().replace(/^["']+|["']+$/g, "").trim()
+            : "";
+
+        if (!Trans_Id) {
+            return invalidInput(res, "Trans_Id is required");
+        }
+
+        const request = new sql.Request();
+        request.input("Trans_Id", sql.VarChar(100), Trans_Id);
+
+        const result = await request.query("EXEC Reporting_Online_Purchase_List @Trans_Id");
+
+        const [
+            invoiceData = [],
+            losData = [],
+            amountData = [],
+            staffDetails = []
+        ] = result.recordsets || [];
+
+        if (
+            (!invoiceData || invoiceData.length === 0) &&
+            (!losData || losData.length === 0) &&
+            (!amountData || amountData.length === 0) &&
+            (!staffDetails || staffDetails.length === 0)
+        ) {
+            return noData(res, "No purchase details found for given Trans_Id");
+        }
+
+        dataFound(res, {
+            invoiceData,
+            losData,
+            amountData,
+            staffDetails
+        });
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const ReportingOnlinePurchasePaymentList = async (req, res) => {
+    try {
+        const rawPinId = req.query.Trans_Id ?? req.query.trans_id ?? req.query.TransId ?? req.query.Pin_Id ?? req.query.pin_id ?? req.query.PIN_Id ?? req.body?.Trans_Id ?? req.body?.Pin_Id ?? req.body?.PIN_Id;
+
+        const Pin_Id = rawPinId !== undefined && rawPinId !== null
+            ? String(rawPinId).trim().replace(/^["']+|["']+$/g, "").trim()
+            : "";
+
+        if (!Pin_Id) {
+            return invalidInput(res, "Trans_Id (Pin_Id) is required");
+        }
+
+        const request = new sql.Request();
+        request.input("Pin_Id", sql.VarChar(100), Pin_Id);
+
+        const result = await request.query("EXEC Reporting_Online_Purchase_Payment_List @Pin_Id");
+
+        const [paymentList = []] = result.recordsets || [];
+
+        if (!paymentList || paymentList.length === 0) {
+            return noData(res, "No purchase payments found for given Trans_Id");
+        }
+
+        dataFound(res, paymentList);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const ReportingOnlinePaymentList = async (req, res) => {
+    try {
+        const rawTransId = req.query.Trans_Id ?? req.query.trans_id ?? req.query.TransId ?? req.query.pay_id ?? req.query.payment_id ?? req.body?.Trans_Id ?? req.body?.pay_id;
+
+        const Trans_Id = rawTransId !== undefined && rawTransId !== null
+            ? String(rawTransId).trim().replace(/^["']+|["']+$/g, "").trim()
+            : "";
+
+        if (!Trans_Id) {
+            return invalidInput(res, "Trans_Id is required");
+        }
+
+        const request = new sql.Request();
+        request.input("Trans_Id", sql.VarChar(100), Trans_Id);
+
+        const result = await request.query("EXEC Reporting_Online_Payment_List @Trans_Id");
+
+        const [
+            headerData = [],
+            referenceData = [],
+            staffDetails = []
+        ] = result.recordsets || [];
+
+        if (
+            (!headerData || headerData.length === 0) &&
+            (!referenceData || referenceData.length === 0) &&
+            (!staffDetails || staffDetails.length === 0)
+        ) {
+            return noData(res, "No payment details found for given Trans_Id");
+        }
+
+        dataFound(res, {
+            headerData,
+            referenceData,
+            staffDetails
+        });
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const ReportingOnlineJournalList = async (req, res) => {
+    try {
+        const rawTransId = req.query.Trans_Id ?? req.query.trans_id ?? req.query.TransId ?? req.query.JournalId ?? req.query.journal_id ?? req.body?.Trans_Id ?? req.body?.JournalId;
+
+        const Trans_Id = rawTransId !== undefined && rawTransId !== null
+            ? String(rawTransId).trim().replace(/^["']+|["']+$/g, "").trim()
+            : "";
+
+        if (!Trans_Id) {
+            return invalidInput(res, "Trans_Id is required");
+        }
+
+        const request = new sql.Request();
+        request.input("Trans_Id", sql.VarChar(100), Trans_Id);
+
+        const result = await request.query("EXEC Reporting_Online_Journal_List @Trans_Id");
+
+        const [
+            headerData = [],
+            lineData = [],
+            referenceData = [],
+            staffDetails = []
+        ] = result.recordsets || [];
+
+        if (
+            (!headerData || headerData.length === 0) &&
+            (!lineData || lineData.length === 0) &&
+            (!referenceData || referenceData.length === 0) &&
+            (!staffDetails || staffDetails.length === 0)
+        ) {
+            return noData(res, "No journal details found for given Trans_Id");
+        }
+
+        dataFound(res, {
+            headerData,
+            lineData,
+            referenceData,
+            staffDetails
+        });
+    } catch (error) {
+        servError(error, res);
+    }
+};

@@ -1453,12 +1453,18 @@ export const buildPurchaseDeliveryDataset = (
                     const batches: string[] = [];
                     const invoiceNos: string[] = [];
                     const paymentNos: string[] = [];
+                    const tripIds: (string | number)[] = [];
                     let totalArrivedKg = 0;
                     let totalPaidAmt = 0;
                     let isAllPaid = arrivedInvoices.length > 0;
 
                     arrivedInvoices.forEach((inv) => {
                         totalArrivedKg += (inv.arrivedQty || 0);
+
+                        const tId = (inv as any).tripId || (inv as any).Trip_Id;
+                        if (tId && !tripIds.includes(tId)) {
+                            tripIds.push(tId);
+                        }
 
                         const jou = cleanStr((inv as any).inwardJouNo || (inv as any).TR_INV_ID || order.inwardJouNo);
                         if (jou && jou !== "-" && !inwardJous.includes(jou)) {
@@ -1558,6 +1564,8 @@ export const buildPurchaseDeliveryDataset = (
                     // Pre-format Inward arrivals for Tab 2
                     const inwardDetailsFormatted = arrivedInvoices.map((inv, idx) => ({
                         sNo: idx + 1,
+                        tripId: (inv as any).tripId || (inv as any).Trip_Id,
+                        Trip_Id: (inv as any).tripId || (inv as any).Trip_Id,
                         location: inv.batchLocation || "Smt Mill",
                         arrivalDate: inv.invoiceDate || order.orderDate,
                         itemName: cleanItemName(inv.itemName),
@@ -1672,6 +1680,8 @@ export const buildPurchaseDeliveryDataset = (
                         allInwardJous: inwardJous,
                         allPurInvNos: actualPurInvNos,
                         allPaymentNos: [],
+                        tripId: tripIds[0] || (order as any).tripId || (order as any).Trip_Id,
+                        allTripIds: tripIds,
 
                         poItems: poItemsFormatted,
                         inwardDetails: inwardDetailsFormatted,

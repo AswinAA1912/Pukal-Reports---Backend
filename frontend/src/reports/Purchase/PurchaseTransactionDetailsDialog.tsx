@@ -36,6 +36,21 @@ import dayjs from "dayjs";
 import { PurchaseDeliveryItem } from "../../services/purchaseDelivery.service";
 import { OnlinePurchaseReportItemByOrderIdService } from "../../services/OnlinePurchaseReport.service";
 import {
+    TripArrivalService,
+    TripArrivalDetail,
+    TripArrivalStaffDetail,
+} from "../../services/tripArrival.service";
+import {
+    PurchaseInvoiceOnlineService,
+    PurchaseInvoiceResponseData,
+} from "../../services/purchaseInvoiceOnline.service";
+import {
+    PurchasePaymentOnlineService,
+    PurchasePaymentListItem,
+    PaymentDetailsResponseData,
+    JournalDetailsResponseData,
+} from "../../services/purchasePaymentOnline.service";
+import {
     formatKgQuantity,
     extractTonsAndKg,
     deriveStockGroup,
@@ -148,6 +163,85 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
     // Selected record states for Inward & Purchase Invoice detailed popups
     const [selectedInwardRow, setSelectedInwardRow] = useState<any | null>(null);
     const [selectedInvoiceRow, setSelectedInvoiceRow] = useState<any | null>(null);
+    const [selectedPaymentRow, setSelectedPaymentRow] = useState<any | null>(null);
+
+    // Trip Arrival Details & Staff Details Map (keyed by tripId) from Reporting_Online_Trip_Arrival_List
+    const [tripArrivalMap, setTripArrivalMap] = useState<Record<string, { details: TripArrivalDetail[]; staffDetails: TripArrivalStaffDetail[] }>>({});
+    const [loadingTripArrival, setLoadingTripArrival] = useState<boolean>(false);
+
+    // Purchase Invoice Online Details Map (keyed by transId / PIN_Id) from Reporting_Online_Purchase_List
+    const [purchaseInvoiceMap, setPurchaseInvoiceMap] = useState<Record<string, PurchaseInvoiceResponseData>>({});
+    const [loadingPurchaseInvoice, setLoadingPurchaseInvoice] = useState<boolean>(false);
+
+    // Purchase Payment List Map (keyed by purchase Trans_Id / PIN_Id) from Reporting_Online_Purchase_Payment_List
+    const [purchasePaymentMap, setPurchasePaymentMap] = useState<Record<string, PurchasePaymentListItem[]>>({});
+    const [loadingPurchasePayment, setLoadingPurchasePayment] = useState<boolean>(false);
+
+    // Payment Detailed View Map (keyed by payment Trans_Id) from Reporting_Online_Payment_List
+    const [paymentDetailsMap, setPaymentDetailsMap] = useState<Record<string, PaymentDetailsResponseData>>({});
+
+    // Journal Detailed View Map (keyed by journal Trans_Id) from Reporting_Online_Journal_List
+    const [journalDetailsMap, setJournalDetailsMap] = useState<Record<string, JournalDetailsResponseData>>({});
+    const [loadingPaymentOrJournal, setLoadingPaymentOrJournal] = useState<boolean>(false);
+
+    // Helper to resolve Trip_Id from any inward row or current item
+    const resolveInwardTripId = (inw?: any): string | number | null => {
+        if (!inw && !item) return null;
+        const candidates = [
+            inw?.tripId,
+            inw?.Trip_Id,
+            inw?.TripId,
+            inw?.trip_id,
+            (item as any)?.tripId,
+            (item as any)?.Trip_Id,
+            inw?.vouNo,
+            inw?.billNo,
+            (item as any)?.inwardJouNo,
+        ];
+        for (const c of candidates) {
+            if (c === undefined || c === null || c === "" || c === "-") continue;
+            const strVal = String(c).trim();
+            if (/^\d+$/.test(strVal) && Number(strVal) > 0) {
+                return strVal;
+            }
+            const match = strVal.match(/\d+$/);
+            if (match && match[0] && Number(match[0]) > 0) {
+                return match[0];
+            }
+        }
+        return null;
+    };
+
+    // Helper to resolve Trans_Id / PIN_Id from any invoice row or current item
+    const resolveInvoiceTransId = (inv?: any): string | null => {
+        if (!inv && !item) return null;
+        const candidates = [
+            inv?.transId,
+            inv?.Trans_Id,
+            inv?.PIN_Id,
+            inv?.pinId,
+            inv?.POI_St_Id,
+            (item as any)?.transId,
+            (item as any)?.Trans_Id,
+            (item as any)?.PIN_Id,
+            inv?.vouNo,
+            inv?.refNumber,
+            inv?.refNo,
+            (item as any)?.purInvNo,
+        ];
+        for (const c of candidates) {
+            if (c === undefined || c === null || c === "" || c === "-") continue;
+            const strVal = String(c).trim();
+            if (/^\d+$/.test(strVal) && Number(strVal) > 0) {
+                return strVal;
+            }
+            const match = strVal.match(/\d+$/);
+            if (match && match[0] && Number(match[0]) > 0) {
+                return match[0];
+            }
+        }
+        return null;
+    };
 
     // Reset tab and active selected rows when dialog opens or item changes or initialTab changes
     useEffect(() => {
@@ -155,6 +249,7 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
             setActiveTab(initialTab ?? 0);
             setSelectedInwardRow(null);
             setSelectedInvoiceRow(null);
+            setSelectedPaymentRow(null);
         }
     }, [open, item, initialTab]);
 
@@ -222,6 +317,304 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
             isMounted = false;
         };
     }, [open, item, siblingRows]);
+
+    // Fetch live Trip Arrival List (details & staffDetails) from Reporting_Online_Trip_Arrival_List
+    useEffect(() => {
+        let isMounted = true;
+        if (!open || !item) return;
+
+        const tripIdsToFetch = new Set<string>();
+
+        const inspectCandidate = (val: any) => {
+            if (val === undefined || val === null || val === "" || val === "-") return;
+            const strVal = String(val).trim();
+            if (/^\d+$/.test(strVal) && Number(strVal) > 0) {
+                tripIdsToFetch.add(strVal);
+                return;
+            }
+            const match = strVal.match(/\d+$/);
+            if (match && match[0] && Number(match[0]) > 0) {
+                tripIdsToFetch.add(match[0]);
+            }
+        };
+
+        inspectCandidate(item.tripId);
+        inspectCandidate((item as any).Trip_Id);
+        inspectCandidate(item.inwardJouNo);
+        (item.allTripIds || []).forEach(inspectCandidate);
+        (item.allInwardJous || []).forEach(inspectCandidate);
+        (item.inwardDetails || []).forEach((inw: any) => {
+            inspectCandidate(inw.tripId);
+            inspectCandidate(inw.Trip_Id);
+            inspectCandidate(inw.billNo);
+            inspectCandidate(inw.vouNo);
+        });
+        (siblingRows || []).forEach((sib: any) => {
+            inspectCandidate(sib.tripId);
+            inspectCandidate(sib.Trip_Id);
+            inspectCandidate(sib.inwardJouNo);
+            (sib.allTripIds || []).forEach(inspectCandidate);
+            (sib.allInwardJous || []).forEach(inspectCandidate);
+        });
+
+        const unCachedIds = Array.from(tripIdsToFetch).filter((tId) => !tripArrivalMap[tId]);
+        if (unCachedIds.length === 0) return;
+
+        setLoadingTripArrival(true);
+        Promise.allSettled(
+            unCachedIds.map((tId) =>
+                TripArrivalService.getTripArrivalList(tId).then((res) => ({
+                    tripId: tId,
+                    data: res.data?.data,
+                }))
+            )
+        )
+            .then((results) => {
+                if (!isMounted) return;
+                const newArrivalMap: Record<string, { details: TripArrivalDetail[]; staffDetails: TripArrivalStaffDetail[] }> = {};
+                results.forEach((r) => {
+                    if (r.status === "fulfilled" && r.value.data) {
+                        const fetched = r.value.data;
+                        newArrivalMap[r.value.tripId] = {
+                            details: Array.isArray(fetched.details) ? fetched.details : [],
+                            staffDetails: Array.isArray(fetched.staffDetails) ? fetched.staffDetails : [],
+                        };
+                    }
+                });
+                if (Object.keys(newArrivalMap).length > 0) {
+                    setTripArrivalMap((prev) => ({ ...prev, ...newArrivalMap }));
+                }
+            })
+            .catch((err) => {
+                console.warn("Could not fetch Trip Arrival List:", err);
+            })
+            .finally(() => {
+                if (isMounted) setLoadingTripArrival(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [open, item, siblingRows, tripArrivalMap]);
+
+    // Fetch live Purchase Invoice Data (Dataset 1-4) from Reporting_Online_Purchase_List
+    useEffect(() => {
+        let isMounted = true;
+        if (!open || !item) return;
+
+        const transIdsToFetch = new Set<string>();
+
+        const inspectCandidate = (val: any) => {
+            if (val === undefined || val === null || val === "" || val === "-") return;
+            const strVal = String(val).trim();
+            if (/^\d+$/.test(strVal) && Number(strVal) > 0) {
+                transIdsToFetch.add(strVal);
+                return;
+            }
+            const match = strVal.match(/\d+$/);
+            if (match && match[0] && Number(match[0]) > 0) {
+                transIdsToFetch.add(match[0]);
+            }
+        };
+
+        inspectCandidate(item.transId);
+        inspectCandidate((item as any).Trans_Id);
+        inspectCandidate((item as any).PIN_Id);
+        inspectCandidate(item.purInvNo);
+        ((item as any).allTransIds || []).forEach(inspectCandidate);
+        (item.allPurInvNos || []).forEach(inspectCandidate);
+        (item.invoiceDetails || []).forEach((inv: any) => {
+            inspectCandidate(inv.transId);
+            inspectCandidate(inv.Trans_Id);
+            inspectCandidate(inv.PIN_Id);
+            inspectCandidate(inv.vouNo);
+            inspectCandidate(inv.refNumber);
+        });
+        (siblingRows || []).forEach((sib: any) => {
+            inspectCandidate(sib.transId);
+            inspectCandidate(sib.Trans_Id);
+            inspectCandidate(sib.PIN_Id);
+            inspectCandidate(sib.purInvNo);
+            (sib.allTransIds || []).forEach(inspectCandidate);
+            (sib.allPurInvNos || []).forEach(inspectCandidate);
+        });
+
+        const unCachedIds = Array.from(transIdsToFetch).filter((tId) => !purchaseInvoiceMap[tId]);
+        if (unCachedIds.length === 0) return;
+
+        setLoadingPurchaseInvoice(true);
+        Promise.allSettled(
+            unCachedIds.map((tId) =>
+                PurchaseInvoiceOnlineService.getPurchaseInvoiceList(tId).then((res) => ({
+                    transId: tId,
+                    data: res.data?.data,
+                }))
+            )
+        )
+            .then((results) => {
+                if (!isMounted) return;
+                const newInvoiceMap: Record<string, PurchaseInvoiceResponseData> = {};
+                results.forEach((r) => {
+                    if (r.status === "fulfilled" && r.value.data) {
+                        const fetched = r.value.data;
+                        newInvoiceMap[r.value.transId] = {
+                            invoiceData: Array.isArray(fetched.invoiceData) ? fetched.invoiceData : [],
+                            losData: Array.isArray(fetched.losData) ? fetched.losData : [],
+                            amountData: Array.isArray(fetched.amountData) ? fetched.amountData : [],
+                            staffDetails: Array.isArray(fetched.staffDetails) ? fetched.staffDetails : [],
+                        };
+                    }
+                });
+                if (Object.keys(newInvoiceMap).length > 0) {
+                    setPurchaseInvoiceMap((prev) => ({ ...prev, ...newInvoiceMap }));
+                }
+            })
+            .catch((err) => {
+                console.warn("Could not fetch Purchase Invoice List:", err);
+            })
+            .finally(() => {
+                if (isMounted) setLoadingPurchaseInvoice(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [open, item, siblingRows, purchaseInvoiceMap]);
+
+    // Fetch live Purchase Payment List (from Reporting_Online_Purchase_Payment_List)
+    useEffect(() => {
+        let isMounted = true;
+        if (!open || !item) return;
+
+        const pinIdsToFetch = new Set<string>();
+
+        const inspectCandidate = (val: any) => {
+            if (val === undefined || val === null || val === "" || val === "-") return;
+            const strVal = String(val).trim();
+            if (/^\d+$/.test(strVal) && Number(strVal) > 0) {
+                pinIdsToFetch.add(strVal);
+                return;
+            }
+            const match = strVal.match(/\d+$/);
+            if (match && match[0] && Number(match[0]) > 0) {
+                pinIdsToFetch.add(match[0]);
+            }
+        };
+
+        inspectCandidate(item.transId);
+        inspectCandidate((item as any).Trans_Id);
+        inspectCandidate((item as any).PIN_Id);
+        inspectCandidate(item.purInvNo);
+        ((item as any).allTransIds || []).forEach(inspectCandidate);
+        (item.allPurInvNos || []).forEach(inspectCandidate);
+        (item.invoiceDetails || []).forEach((inv: any) => {
+            inspectCandidate(inv.transId);
+            inspectCandidate(inv.Trans_Id);
+            inspectCandidate(inv.PIN_Id);
+            inspectCandidate(inv.vouNo);
+            inspectCandidate(inv.refNumber);
+        });
+        (siblingRows || []).forEach((sib: any) => {
+            inspectCandidate(sib.transId);
+            inspectCandidate(sib.Trans_Id);
+            inspectCandidate(sib.PIN_Id);
+            inspectCandidate(sib.purInvNo);
+            (sib.allTransIds || []).forEach(inspectCandidate);
+            (sib.allPurInvNos || []).forEach(inspectCandidate);
+        });
+
+        const unCachedIds = Array.from(pinIdsToFetch).filter((id) => !purchasePaymentMap[id]);
+        if (unCachedIds.length === 0) return;
+
+        setLoadingPurchasePayment(true);
+        Promise.allSettled(
+            unCachedIds.map((pinId) =>
+                PurchasePaymentOnlineService.getPurchasePaymentList(pinId).then((res) => ({
+                    pinId,
+                    data: res.data?.data,
+                }))
+            )
+        )
+            .then((results) => {
+                if (!isMounted) return;
+                const newMap: Record<string, PurchasePaymentListItem[]> = {};
+                results.forEach((r) => {
+                    if (r.status === "fulfilled" && r.value.data) {
+                        newMap[r.value.pinId] = Array.isArray(r.value.data) ? r.value.data : [];
+                    }
+                });
+                if (Object.keys(newMap).length > 0) {
+                    setPurchasePaymentMap((prev) => ({ ...prev, ...newMap }));
+                }
+            })
+            .catch((err) => {
+                console.warn("Could not fetch Purchase Payment List:", err);
+            })
+            .finally(() => {
+                if (isMounted) setLoadingPurchasePayment(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [open, item, siblingRows, purchasePaymentMap]);
+
+    // Fetch live Payment Details or Journal Details when a Payment row is selected
+    useEffect(() => {
+        let isMounted = true;
+        if (!selectedPaymentRow) return;
+
+        const payTransId = selectedPaymentRow.Trans_Id || selectedPaymentRow.transId || selectedPaymentRow.pay_id || selectedPaymentRow.id;
+        if (!payTransId) return;
+
+        const strTransId = String(payTransId).trim();
+        const isJournal = String(selectedPaymentRow.Particulars || selectedPaymentRow.vouType || "").toUpperCase().includes("JOURNAL");
+
+        if (isJournal) {
+            if (journalDetailsMap[strTransId]) return;
+            setLoadingPaymentOrJournal(true);
+            PurchasePaymentOnlineService.getJournalDetails(strTransId)
+                .then((res) => {
+                    if (!isMounted || !res.data?.data) return;
+                    setJournalDetailsMap((prev) => ({
+                        ...prev,
+                        [strTransId]: {
+                            headerData: Array.isArray(res.data.data.headerData) ? res.data.data.headerData : [],
+                            lineData: Array.isArray(res.data.data.lineData) ? res.data.data.lineData : [],
+                            referenceData: Array.isArray(res.data.data.referenceData) ? res.data.data.referenceData : [],
+                            staffDetails: Array.isArray(res.data.data.staffDetails) ? res.data.data.staffDetails : [],
+                        },
+                    }));
+                })
+                .catch((err) => console.warn("Failed to fetch journal details:", err))
+                .finally(() => {
+                    if (isMounted) setLoadingPaymentOrJournal(false);
+                });
+        } else {
+            if (paymentDetailsMap[strTransId]) return;
+            setLoadingPaymentOrJournal(true);
+            PurchasePaymentOnlineService.getPaymentDetails(strTransId)
+                .then((res) => {
+                    if (!isMounted || !res.data?.data) return;
+                    setPaymentDetailsMap((prev) => ({
+                        ...prev,
+                        [strTransId]: {
+                            headerData: Array.isArray(res.data.data.headerData) ? res.data.data.headerData : [],
+                            referenceData: Array.isArray(res.data.data.referenceData) ? res.data.data.referenceData : [],
+                            staffDetails: Array.isArray(res.data.data.staffDetails) ? res.data.data.staffDetails : [],
+                        },
+                    }));
+                })
+                .catch((err) => console.warn("Failed to fetch payment details:", err))
+                .finally(() => {
+                    if (isMounted) setLoadingPaymentOrJournal(false);
+                });
+        }
+
+        return () => {
+            isMounted = false;
+        };
+    }, [selectedPaymentRow, paymentDetailsMap, journalDetailsMap]);
 
     if (!item) return null;
 
@@ -400,14 +793,32 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
             const rowTonnageKg = inw.tonnageKg || (inw.quantity && typeof inw.quantity === "number" ? inw.quantity : (item.tonnageKg || 0));
             const stockItem = inw.itemName || inw.stockItem || item.inwardItem || "-";
             const stockGroup = inw.stockGroup || inw.stock_group || inw.group || (inw as any).Stock_Group || item.stockGroup || (stockItem !== "-" ? deriveStockGroup(stockItem) : "-") || "-";
+
+            // Resolve Trip_Id and check if Reporting_Online_Trip_Arrival_List returned arrival details
+            const rowTripId = resolveInwardTripId(inw);
+            const liveArrival = rowTripId ? tripArrivalMap[rowTripId] : null;
+            const liveFirstDetail = liveArrival?.details && liveArrival.details.length > 0 ? liveArrival.details[0] : null;
+
+            // Use live details if available from dataset 1
+            const effectiveDate = liveFirstDetail?.Stock_Journal_date
+                ? formatDisplayDate(liveFirstDetail.Stock_Journal_date)
+                : formatDisplayDate(inw.arrivalDate || inw.entryDate || inw.date || inw.orderDate || item.orderDate || loadingDate);
+            const effectiveVouNo = liveFirstDetail?.Journal_no
+                ? String(liveFirstDetail.Journal_no)
+                : ((inw.billNo && inw.billNo !== "-") ? String(inw.billNo) : ((inw.inwardJouNo && inw.inwardJouNo !== "-") ? String(inw.inwardJouNo) : (item.inwardJouNo || `MIA/${String(idx + 1).padStart(6, "0")}/26-27`)));
+            const effectiveVouType = liveFirstDetail?.Stock_Journal_Voucher_type || liveFirstDetail?.Bill_type || inw.voucherType || inw.billType || "ON_M_OUTWARDS";
+            const effectiveNarr = liveFirstDetail?.Narration || inw.narration || inw.narr || inw.remarks || item.remarks || extraFirst?.Narration || "-";
+
             return {
                 sNo: idx + 1,
-                entryDate: formatDisplayDate(inw.arrivalDate || inw.entryDate || inw.date || inw.orderDate || item.orderDate || loadingDate),
+                tripId: rowTripId || inw.tripId || inw.Trip_Id,
+                Trip_Id: rowTripId || inw.tripId || inw.Trip_Id,
+                entryDate: effectiveDate,
                 vehicleNo: inw.vehicleNo || inw.inwardVehicle || inw.transportDetails?.vehicleNo || item.transportDetails?.vehicleNo || (item as any).vehicleNo || "-",
-                vouType: inw.voucherType || inw.billType || "ON_M_OUTWARDS",
-                vouNo: (inw.billNo && inw.billNo !== "-") ? String(inw.billNo) : ((inw.inwardJouNo && inw.inwardJouNo !== "-") ? String(inw.inwardJouNo) : (item.inwardJouNo || `MIA/${String(idx + 1).padStart(6, "0")}/26-27`)),
+                vouType: effectiveVouType,
+                vouNo: effectiveVouNo,
                 retailerName: inw.retailerName || retailerName || (item as any).retailerName || "-",
-                narr: inw.narration || inw.narr || inw.remarks || item.remarks || extraFirst?.Narration || "-",
+                narr: effectiveNarr,
                 stockItem,
                 stockGroup,
                 qty: inw.quantity ? `${inw.quantity} ${inw.unit || "Bags"}` : (rowTonnageKg ? formatKgQuantity(rowTonnageKg) : "-"),
@@ -446,43 +857,160 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
         }
 
         return baseRows.map((inv: any, idx: number) => {
-            const rowTonnageKg = inv.tonnageKg || inv.billQty || inv.aclQty || item.tonnageKg || 0;
-            const stockItemName = inv.itemName || inv.stockItemName || item.inwardItem || "-";
+            const rowTransId = resolveInvoiceTransId(inv);
+            const liveInv = rowTransId ? purchaseInvoiceMap[rowTransId] : null;
+            const liveHeader = liveInv?.invoiceData && liveInv.invoiceData.length > 0 ? liveInv.invoiceData[0] : null;
+            const liveLos = liveInv?.losData && liveInv.losData.length > 0 ? liveInv.losData : [];
+            const liveFirstLos = liveLos.length > 0 ? liveLos[0] : null;
+            const liveAmounts = liveInv?.amountData && liveInv.amountData.length > 0 ? liveInv.amountData : [];
+
+            // Sum up taxes and line item amounts from live data if present
+            let liveTotalLosAmt = 0;
+            let liveTotalBillQty = 0;
+            let liveTotalActQty = 0;
+            liveLos.forEach((l) => {
+                const bQ = Number(l.Bill_Qty);
+                if (!isNaN(bQ)) liveTotalBillQty += bQ;
+                const aQ = Number(l.Act_Qty);
+                if (!isNaN(aQ)) liveTotalActQty += aQ;
+                const amt = Number(l.Amount);
+                if (!isNaN(amt)) liveTotalLosAmt += amt;
+            });
+
+            let liveCgst = 0;
+            let liveSgst = 0;
+            let liveIgst = 0;
+            let liveRoundOff = 0;
+            let liveExpenses = 0;
+
+            liveAmounts.forEach((a) => {
+                const acc = String(a.Account_name || "").toUpperCase();
+                const dr = Number(a.Amount_value_DR) || 0;
+                const cr = Number(a.Amount_value_CR) || 0;
+                const val = dr > 0 ? dr : (cr > 0 ? -cr : 0);
+
+                if (acc.includes("CGST")) {
+                    liveCgst += dr > 0 ? dr : cr;
+                } else if (acc.includes("SGST")) {
+                    liveSgst += dr > 0 ? dr : cr;
+                } else if (acc.includes("IGST")) {
+                    liveIgst += dr > 0 ? dr : cr;
+                } else if (acc.includes("ROUND")) {
+                    liveRoundOff += val;
+                } else {
+                    liveExpenses += val;
+                }
+            });
+
+            const liveGrossTotal = liveTotalLosAmt > 0
+                ? (liveTotalLosAmt + liveCgst + liveSgst + liveIgst + liveExpenses + liveRoundOff)
+                : 0;
+
+            const rowTonnageKg = liveTotalActQty > 0
+                ? liveTotalActQty
+                : (inv.tonnageKg || inv.billQty || inv.aclQty || item.tonnageKg || 0);
+
+            const stockItemName = liveFirstLos?.Product_Name || liveFirstLos?.Stock_Item || inv.itemName || inv.stockItemName || item.inwardItem || "-";
             const stockGroup = inv.stockGroup || inv.stock_group || inv.group || (inv as any).Stock_Group || item.stockGroup || (stockItemName !== "-" ? deriveStockGroup(stockItemName) : "-") || "-";
+
+            const effectiveEntryDate = liveHeader?.Ledger_Date
+                ? formatDisplayDate(liveHeader.Ledger_Date)
+                : formatDisplayDate(inv.entryDate || inv.date || inv.billDate || inv.orderDate || item.orderDate || loadingDate);
+
+            const effectiveBillDate = liveFirstLos?.Po_Inv_Date
+                ? formatDisplayDate(liveFirstLos.Po_Inv_Date)
+                : (liveHeader?.Ledger_Date ? formatDisplayDate(liveHeader.Ledger_Date) : formatDisplayDate(inv.billDate || inv.date || inv.entryDate || inv.orderDate || item.orderDate || loadingDate));
+
+            const effectiveVouNo = liveHeader?.invoice_no
+                ? String(liveHeader.invoice_no)
+                : ((inv.vouNo && inv.vouNo !== "-") ? String(inv.vouNo) : (inv.refNumber || inv.purInvNo || item.purInvNo || `INV-${item.purOrderNo}-${idx + 1}`));
+
+            const effectiveRefNo = liveHeader?.Ref_Po_Inv_No
+                ? String(liveHeader.Ref_Po_Inv_No)
+                : (inv.refNumber || inv.refNo || inv.purInvNo || item.purInvNo || `INV-${item.purOrderNo}-${idx + 1}`);
+
+            const effectivePartyName = liveHeader?.Retailer_Name || inv.vendor || inv.partyName || retailerName || (item as any).retailerName || "-";
+            const effectiveVouType = liveHeader?.voucher_name || inv.voucherType || inv.vouType || "Purchase Invoice";
+
             return {
                 sNo: idx + 1,
-                entryDate: formatDisplayDate(inv.entryDate || inv.date || inv.billDate || inv.orderDate || item.orderDate || loadingDate),
-                billDate: formatDisplayDate(inv.billDate || inv.date || inv.entryDate || inv.orderDate || item.orderDate || loadingDate),
-                vouType: inv.voucherType || inv.vouType || "Purchase Invoice",
-                vouNo: (inv.vouNo && inv.vouNo !== "-") ? String(inv.vouNo) : (inv.refNumber || inv.purInvNo || item.purInvNo || `INV-${item.purOrderNo}-${idx + 1}`),
-                refNo: inv.refNumber || inv.refNo || inv.purInvNo || item.purInvNo || `INV-${item.purOrderNo}-${idx + 1}`,
-                partyName: inv.vendor || inv.partyName || retailerName || (item as any).retailerName || "-",
+                transId: rowTransId,
+                Trans_Id: rowTransId,
+                entryDate: effectiveEntryDate,
+                billDate: effectiveBillDate,
+                vouType: effectiveVouType,
+                vouNo: effectiveVouNo,
+                refNo: effectiveRefNo,
+                partyName: effectivePartyName,
                 narr: inv.narration || inv.narr || inv.remarks || item.remarks || extraFirst?.Narration || "-",
                 stockItemName,
                 stockGroup,
-                actQty: inv.aclQty ? (typeof inv.aclQty === "number" ? formatKgQuantity(inv.aclQty) : inv.aclQty) : (rowTonnageKg ? formatKgQuantity(rowTonnageKg) : "-"),
-                billQty: inv.billQty ? (typeof inv.billQty === "number" ? formatKgQuantity(inv.billQty) : inv.billQty) : (rowTonnageKg ? formatKgQuantity(rowTonnageKg) : "-"),
-                rate: inv.rate !== undefined && inv.rate !== "As recorded" ? (typeof inv.rate === "number" ? formatCurrency(inv.rate) : inv.rate) : "As recorded",
-                amount: inv.amount !== undefined && inv.amount !== "As recorded" ? formatCurrency(inv.amount) : (inv.paymentAmt ? formatCurrency(inv.paymentAmt) : (item.paymentAmt ? formatCurrency(item.paymentAmt) : "As recorded")),
-                godown: inv.godown || inv.batchLocation || "Main Godown",
+                actQty: liveTotalActQty > 0
+                    ? `${liveTotalActQty} ${liveFirstLos?.Unit || "kg"}`
+                    : (inv.aclQty ? (typeof inv.aclQty === "number" ? formatKgQuantity(inv.aclQty) : inv.aclQty) : (rowTonnageKg ? formatKgQuantity(rowTonnageKg) : "-")),
+                billQty: liveTotalBillQty > 0
+                    ? `${liveTotalBillQty} ${liveFirstLos?.Unit || "kg"}`
+                    : (inv.billQty ? (typeof inv.billQty === "number" ? formatKgQuantity(inv.billQty) : inv.billQty) : (rowTonnageKg ? formatKgQuantity(rowTonnageKg) : "-")),
+                rate: liveFirstLos?.Rate !== undefined && liveFirstLos.Rate !== null
+                    ? (typeof liveFirstLos.Rate === "number" ? formatCurrency(liveFirstLos.Rate) : `₹ ${liveFirstLos.Rate}`)
+                    : (inv.rate !== undefined && inv.rate !== "As recorded" ? (typeof inv.rate === "number" ? formatCurrency(inv.rate) : inv.rate) : "As recorded"),
+                amount: liveTotalLosAmt > 0
+                    ? formatCurrency(liveTotalLosAmt)
+                    : (inv.amount !== undefined && inv.amount !== "As recorded" ? formatCurrency(inv.amount) : (inv.paymentAmt ? formatCurrency(inv.paymentAmt) : (item.paymentAmt ? formatCurrency(item.paymentAmt) : "As recorded"))),
+                godown: liveFirstLos?.Godown_Id ? `Godown ${liveFirstLos.Godown_Id}` : (inv.godown || inv.batchLocation || "Main Godown"),
                 batch: inv.batch || inv.batchNo || item.batch || "-",
-                expenses: inv.expenses !== undefined && inv.expenses !== "-" ? formatCurrency(inv.expenses) : "-",
-                cgst: inv.cgst !== undefined && inv.cgst !== "-" ? formatCurrency(inv.cgst) : "-",
-                sgst: inv.sgst !== undefined && inv.sgst !== "-" ? formatCurrency(inv.sgst) : "-",
-                igst: inv.igst !== undefined && inv.igst !== "-" ? formatCurrency(inv.igst) : "-",
-                roundOff: inv.roundOff !== undefined && inv.roundOff !== "-" ? formatCurrency(inv.roundOff) : "-",
-                totalAmount: inv.totalAmount !== undefined && inv.totalAmount !== "-" ? formatCurrency(inv.totalAmount) : (inv.amount && inv.amount !== "As recorded" ? formatCurrency(inv.amount) : (item.paymentAmt ? formatCurrency(item.paymentAmt) : "-")),
+                expenses: liveExpenses !== 0 ? formatCurrency(liveExpenses) : (inv.expenses !== undefined && inv.expenses !== "-" ? formatCurrency(inv.expenses) : "-"),
+                cgst: liveCgst > 0 ? formatCurrency(liveCgst) : (inv.cgst !== undefined && inv.cgst !== "-" ? formatCurrency(inv.cgst) : "-"),
+                sgst: liveSgst > 0 ? formatCurrency(liveSgst) : (inv.sgst !== undefined && inv.sgst !== "-" ? formatCurrency(inv.sgst) : "-"),
+                igst: liveIgst > 0 ? formatCurrency(liveIgst) : (inv.igst !== undefined && inv.igst !== "-" ? formatCurrency(inv.igst) : "-"),
+                roundOff: liveRoundOff !== 0 ? formatCurrency(liveRoundOff) : (inv.roundOff !== undefined && inv.roundOff !== "-" ? formatCurrency(inv.roundOff) : "-"),
+                totalAmount: liveGrossTotal > 0
+                    ? formatCurrency(liveGrossTotal)
+                    : (inv.totalAmount !== undefined && inv.totalAmount !== "-" ? formatCurrency(inv.totalAmount) : (inv.amount && inv.amount !== "As recorded" ? formatCurrency(inv.amount) : (item.paymentAmt ? formatCurrency(item.paymentAmt) : "-"))),
                 staffInvolved: inv.staffInvolved || inv.staff || ownerName || "-",
                 discount: inv.discount !== undefined ? String(inv.discount) : "0",
                 paymentDays: String(inv.days || inv.Days || inv.paymentDays || inv.payment_days || inv.dueDays || inv.due_days || inv.creditDays || inv.credit_days || (item.paymentCondition ? String(item.paymentCondition).replace(/[^0-9]/g, "") : "") || "3").replace(/days?/i, "").trim() || "3",
                 balInwardTonnage: inv.balInwardTonnage || inv.balTonnage || "-",
                 rowTonnageKg,
+                liveLos,
+                liveAmounts,
+                liveHeader,
             };
         });
     })();
 
     // Payment records to display in Tab 3 (Payment - 9 columns matching photo)
     const displayPayments = (() => {
+        const rowTransId = resolveInvoiceTransId(item);
+        const livePaymentList = rowTransId ? purchasePaymentMap[rowTransId] : undefined;
+
+        if (livePaymentList && livePaymentList.length > 0) {
+            return livePaymentList.map((p, idx) => {
+                const isJournal = String(p.Particulars || "").toUpperCase().includes("JOURNAL");
+                const dr = Number(p.Dr_Amount) || 0;
+                const cr = Number(p.Cr_Amount) || 0;
+                const effectiveAmt = dr > 0 ? dr : (cr > 0 ? cr : 0);
+
+                return {
+                    sNo: idx + 1,
+                    Trans_Id: p.Trans_Id,
+                    PIN_Id: p.PIN_Id,
+                    entryDate: formatDisplayDate(p.Trans_Date || item.orderDate || loadingDate),
+                    vouType: isJournal ? "ON_Journal SM" : "ON_Payment SM",
+                    vouNo: p.Invoice_no,
+                    purPartyName: retailerName || (item as any).retailerName || "-",
+                    totalInvoiceAmount: formatCurrency(effectiveAmt),
+                    paidAmt: formatCurrency(effectiveAmt),
+                    balanceInvAmt: "₹ 0.00",
+                    staffInvolved: ownerName || "ADMIN",
+                    debitAmt: dr,
+                    creditAmt: cr,
+                    narration: `${p.Particulars || "PAYMENT"} against invoice ${p.Invoice_no}`,
+                    Particulars: p.Particulars || (isJournal ? "JOURNAL" : "PAYMENT"),
+                };
+            });
+        }
+
         let baseRows: any[] = [];
         if (item.paymentDetails && item.paymentDetails.length > 0) {
             baseRows = item.paymentDetails;
@@ -497,6 +1025,8 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
 
         return baseRows.map((p: any, idx: number) => ({
             sNo: idx + 1,
+            Trans_Id: p.Trans_Id || p.transId || rowTransId,
+            PIN_Id: p.PIN_Id || p.pinId,
             entryDate: formatDisplayDate(p.date || p.entryDate || p.paymentDate || p.orderDate || item.orderDate || loadingDate),
             vouType: p.voucherType || p.vouType || p.billType || "ON_Payment SM - Exp",
             vouNo: p.vouNo || p.voucher || p.paymentNo || item.paymentNo || "ON_Payment SM - Exp",
@@ -508,27 +1038,87 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
             debitAmt: p.debitAmt,
             creditAmt: p.creditAmt,
             narration: p.narration || p.narr || p.remarks || remarks || "-",
+            Particulars: p.Particulars || "PAYMENT",
         }));
     })();
 
     // Staff Involved generator functions for each stage
     const effectiveBroker = brokerName !== "-" ? brokerName : ((item as any)?.broker || "DIRECT");
 
-    const getInwardStaffList = (inw: any) => [
-        { category: "DIRECT", role: "Broker", name: effectiveBroker },
-        { category: "TRANSPORT", role: "Transport / Vehicle", name: `${inw?.vehicleNo || "Direct"} (${inw?.driver || (item as any)?.driver || "Driver Assigned"})` },
-        { category: "OWNERS", role: "Owners / Approver", name: ownerName || "ADMIN" },
-        { category: "DETAILS", role: "Godown Supervisor", name: `${inw?.toGodown || "Main Godown"} Supervisor` },
-        { category: "ATTENDANT", role: "Inward Attendant", name: inw?.staffInvolved || "Yard Attendant" },
-    ];
+    const getInwardStaffList = (inw: any) => {
+        const rowTripId = resolveInwardTripId(inw);
+        const liveArrival = rowTripId ? tripArrivalMap[rowTripId] : null;
 
-    const getInvoiceStaffList = (inv: any) => [
-        { category: "DIRECT", role: "Broker", name: effectiveBroker },
-        { category: "DETAILS", role: "Billing Staff", name: inv?.staffInvolved || "Accounts Team" },
-        { category: "OWNERS", role: "Owners / Signatory", name: ownerName || "ADMIN" },
-        { category: "ATTENDANT", role: "Vendor Representative", name: inv?.partyName || retailerName || "Vendor" },
-        { category: "TRANSPORT", role: "Payment Terms", name: `${inv?.paymentDays || "0"} Days Credit` },
-    ];
+        if (liveArrival?.staffDetails && liveArrival.staffDetails.length > 0) {
+            return liveArrival.staffDetails.map((s) => ({
+                category: String(s.Cost_Category || "STAFF").toUpperCase(),
+                role: String(s.Alias_Name || s.Cost_Category || "Staff"),
+                name: String(s.Cost_Center_Name || "-"),
+            }));
+        }
+
+        return [
+            { category: "DIRECT", role: "Broker", name: effectiveBroker },
+            { category: "TRANSPORT", role: "Transport / Vehicle", name: `${inw?.vehicleNo || "Direct"} (${inw?.driver || (item as any)?.driver || "Driver Assigned"})` },
+            { category: "OWNERS", role: "Owners / Approver", name: ownerName || "ADMIN" },
+            { category: "DETAILS", role: "Godown Supervisor", name: `${inw?.toGodown || "Main Godown"} Supervisor` },
+            { category: "ATTENDANT", role: "Inward Attendant", name: inw?.staffInvolved || "Yard Attendant" },
+        ];
+    };
+
+    const getInvoiceStaffList = (inv: any) => {
+        const rowTransId = resolveInvoiceTransId(inv);
+        const liveInv = rowTransId ? purchaseInvoiceMap[rowTransId] : null;
+
+        if (liveInv?.staffDetails && liveInv.staffDetails.length > 0) {
+            return liveInv.staffDetails.map((s) => ({
+                category: String(s.Cost_Category || "STAFF").toUpperCase(),
+                role: String(s.Alias_Name || s.Cost_Category || "Staff"),
+                name: String(s.Cost_Center_Name || "-"),
+            }));
+        }
+
+        return [
+            { category: "DIRECT", role: "Broker", name: effectiveBroker },
+            { category: "DETAILS", role: "Billing Staff", name: inv?.staffInvolved || "Accounts Team" },
+            { category: "OWNERS", role: "Owners / Signatory", name: ownerName || "ADMIN" },
+            { category: "ATTENDANT", role: "Vendor Representative", name: inv?.partyName || retailerName || "Vendor" },
+            { category: "TRANSPORT", role: "Payment Terms", name: `${inv?.paymentDays || "0"} Days Credit` },
+        ];
+    };
+
+    const getPaymentStaffList = (p: any) => {
+        const payTransId = String(p?.Trans_Id || p?.transId || p?.pay_id || "").trim();
+        const isJournal = String(p?.Particulars || p?.vouType || "").toUpperCase().includes("JOURNAL");
+
+        if (isJournal) {
+            const jLive = payTransId ? journalDetailsMap[payTransId] : null;
+            if (jLive?.staffDetails && jLive.staffDetails.length > 0) {
+                return jLive.staffDetails.map((s) => ({
+                    category: String(s.Cost_Category || "STAFF").toUpperCase(),
+                    role: String(s.Alias_Name || s.Cost_Category || "Staff"),
+                    name: String(s.Cost_Center_Name || "-"),
+                }));
+            }
+        } else {
+            const pLive = payTransId ? paymentDetailsMap[payTransId] : null;
+            if (pLive?.staffDetails && pLive.staffDetails.length > 0) {
+                return pLive.staffDetails.map((s) => ({
+                    category: String(s.Cost_Category || "STAFF").toUpperCase(),
+                    role: String(s.Alias_Name || s.Cost_Category || "Staff"),
+                    name: String(s.Cost_Center_Name || "-"),
+                }));
+            }
+        }
+
+        return [
+            { category: "DIRECT", role: "Broker", name: effectiveBroker },
+            { category: "DETAILS", role: "Accounts Cashier", name: p?.staffInvolved || "Accounts Team" },
+            { category: "OWNERS", role: "Authorized Approver", name: ownerName || "ADMIN" },
+            { category: "ATTENDANT", role: "Payee / Party", name: p?.purPartyName || retailerName || "Payee" },
+            { category: "FINANCE", role: "Mode", name: p?.transaction_type || "Bank Transfer" },
+        ];
+    };
 
     // Top Summary Banner Calculations: Ordered, Received, Wants to Receive & Stage Statuses
     const totalOrderedKg = (() => {
@@ -1704,7 +2294,7 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
                             <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, flexWrap: "wrap" }}>
                                 <Chip
                                     size="small"
-                                    label={`${displayPayments.length} ${displayPayments.length === 1 ? "Payment Record" : "Payment Records"}`}
+                                    label={`${displayPayments.length} ${displayPayments.length === 1 ? "Payment Record" : "Payment Records"}${loadingPurchasePayment ? " (Loading...)" : ""}`}
                                     sx={{ bgcolor: "#e0f2fe", color: "#0369a1", fontWeight: 800, fontSize: "0.72rem" }}
                                 />
 
@@ -1773,7 +2363,15 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
                                     {displayPayments.length > 0 ? (
                                         displayPayments.map((p, pIdx) => (
                                             <React.Fragment key={pIdx}>
-                                                <TableRow sx={{ bgcolor: "#ffffff", "&:hover": { bgcolor: "#f8fafc" } }}>
+                                                <TableRow
+                                                    sx={{
+                                                        bgcolor: "#ffffff",
+                                                        cursor: "pointer",
+                                                        "&:hover": { bgcolor: "#f5f3ff" },
+                                                    }}
+                                                    onClick={() => setSelectedPaymentRow(p)}
+                                                    title="Click to view detailed payment / journal transaction"
+                                                >
                                                     {/* 1. S.no */}
                                                     <TableCell align="center" sx={{ fontWeight: 700, color: "#475569" }}>
                                                         {pIdx + 1}
@@ -2211,7 +2809,16 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={3}>
                                                 <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Staff Involved</Typography>
-                                                <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{selectedInwardRow.staffInvolved}</Typography>
+                                                <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>
+                                                    {(() => {
+                                                        const rowTripId = resolveInwardTripId(selectedInwardRow);
+                                                        const liveArrival = rowTripId ? tripArrivalMap[rowTripId] : null;
+                                                        if (liveArrival?.staffDetails && liveArrival.staffDetails.length > 0) {
+                                                            return liveArrival.staffDetails.map(s => s.Cost_Center_Name).filter(Boolean).join(", ");
+                                                        }
+                                                        return selectedInwardRow.staffInvolved;
+                                                    })()}
+                                                </Typography>
                                             </Grid>
                                         </Grid>
                                     </Paper>
@@ -2219,7 +2826,10 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
 
                                 {/* Right: Staff Involved Table Companion Card */}
                                 <Box sx={{ width: { xs: "100%", md: 320 }, flexShrink: 0 }}>
-                                    {renderStaffInvolvedCard("Staff Involved", getInwardStaffList(selectedInwardRow))}
+                                    {renderStaffInvolvedCard(
+                                        `Staff Involved${loadingTripArrival ? " (Loading...)" : ""}`,
+                                        getInwardStaffList(selectedInwardRow)
+                                    )}
                                 </Box>
                             </Box>
                         </DialogContent>
@@ -2383,117 +2993,251 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
-                                                <TableRow sx={{ bgcolor: "#ffffff" }}>
-                                                    {/* S.no */}
-                                                    <TableCell align="center" sx={{ fontWeight: 700, color: "#475569" }}>
-                                                        {selectedInvoiceRow.sNo}
-                                                    </TableCell>
+                                                {(() => {
+                                                    const rowTransId = resolveInvoiceTransId(selectedInvoiceRow);
+                                                    const liveInv = rowTransId ? purchaseInvoiceMap[rowTransId] : null;
+                                                    const liveLos = liveInv?.losData && liveInv.losData.length > 0 ? liveInv.losData : (selectedInvoiceRow.liveLos && selectedInvoiceRow.liveLos.length > 0 ? selectedInvoiceRow.liveLos : null);
 
-                                                    {/* Dates (Bill Date & Entry Date) */}
-                                                    <TableCell align="left">
-                                                        <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#0284c7", lineHeight: 1.2 }}>
-                                                            Bill: {selectedInvoiceRow.billDate}
-                                                        </Typography>
-                                                        <Typography sx={{ fontSize: "0.68rem", color: "#64748b", mt: 0.2 }}>
-                                                            Entry: {selectedInvoiceRow.entryDate}
-                                                        </Typography>
-                                                    </TableCell>
+                                                    if (liveLos && liveLos.length > 0) {
+                                                        return liveLos.map((itemRow: any, lIdx: number) => {
+                                                            const itemStockName = itemRow.Product_Name || itemRow.Stock_Item || selectedInvoiceRow.stockItemName || "-";
+                                                            const itemStockGroup = selectedInvoiceRow.stockGroup !== "-" ? selectedInvoiceRow.stockGroup : deriveStockGroup(itemStockName);
+                                                            const itemBillQty = itemRow.Bill_Qty ? `${itemRow.Bill_Qty} ${itemRow.Unit || "kg"}` : selectedInvoiceRow.billQty;
+                                                            const itemActQty = itemRow.Act_Qty ? `${itemRow.Act_Qty} ${itemRow.Unit || "kg"}` : selectedInvoiceRow.actQty;
+                                                            const itemRate = itemRow.Rate !== undefined && itemRow.Rate !== null ? (typeof itemRow.Rate === "number" ? formatCurrency(itemRow.Rate) : `₹ ${itemRow.Rate}`) : selectedInvoiceRow.rate;
+                                                            const itemAmt = itemRow.Amount !== undefined && itemRow.Amount !== null ? (typeof itemRow.Amount === "number" ? formatCurrency(itemRow.Amount) : `₹ ${itemRow.Amount}`) : selectedInvoiceRow.amount;
+                                                            const itemGodown = itemRow.Godown_Id ? `Godown ${itemRow.Godown_Id}` : selectedInvoiceRow.godown;
 
-                                                    {/* Voucher (Vou No, Ref No, Vou Type) */}
-                                                    <TableCell align="left">
-                                                        <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#1e3a8a", lineHeight: 1.2 }} title={String(selectedInvoiceRow.vouNo)}>
-                                                            {selectedInvoiceRow.vouNo}
-                                                        </Typography>
-                                                        {selectedInvoiceRow.refNo && selectedInvoiceRow.refNo !== selectedInvoiceRow.vouNo && (
-                                                            <Typography sx={{ fontSize: "0.68rem", color: "#475569", mt: 0.2 }} title={selectedInvoiceRow.refNo}>
-                                                                    Ref: {selectedInvoiceRow.refNo}
-                                                            </Typography>
-                                                        )}
-                                                        <Typography sx={{ fontSize: "0.64rem", color: "#64748b" }}>
-                                                            {selectedInvoiceRow.vouType}
-                                                        </Typography>
-                                                    </TableCell>
+                                                            return (
+                                                                <TableRow key={lIdx} sx={{ bgcolor: lIdx % 2 === 1 ? "#fafbfc" : "#ffffff" }}>
+                                                                    {/* S.no */}
+                                                                    <TableCell align="center" sx={{ fontWeight: 700, color: "#475569" }}>
+                                                                        {itemRow.S_No || (lIdx + 1)}
+                                                                    </TableCell>
 
-                                                    {/* Party Name, Staff Involved, Payment Days */}
-                                                    <TableCell align="left">
-                                                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.25 }} title={selectedInvoiceRow.partyName}>
-                                                            {selectedInvoiceRow.partyName}
-                                                        </Typography>
-                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, mt: 0.3, flexWrap: "wrap" }}>
-                                                            <Typography sx={{ fontSize: "0.66rem", color: "#475569" }}>
-                                                                Staff: <strong style={{ color: "#0f172a" }}>{selectedInvoiceRow.staffInvolved}</strong>
-                                                            </Typography>
-                                                            <Typography sx={{ fontSize: "0.66rem", color: "#475569" }}>
-                                                                Days: <strong style={{ color: "#0f172a" }}>{selectedInvoiceRow.paymentDays}</strong>
-                                                            </Typography>
-                                                        </Box>
-                                                    </TableCell>
+                                                                    {/* Dates (Bill Date & Entry Date) */}
+                                                                    <TableCell align="left">
+                                                                        <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#0284c7", lineHeight: 1.2 }}>
+                                                                            Bill: {itemRow.Po_Inv_Date ? formatDisplayDate(itemRow.Po_Inv_Date) : selectedInvoiceRow.billDate}
+                                                                        </Typography>
+                                                                        <Typography sx={{ fontSize: "0.68rem", color: "#64748b", mt: 0.2 }}>
+                                                                            Entry: {selectedInvoiceRow.entryDate}
+                                                                        </Typography>
+                                                                    </TableCell>
 
-                                                    {/* Stock Item Name, Godown & Batch */}
-                                                    <TableCell align="left">
-                                                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, color: "#0f172a", lineHeight: 1.25 }} title={selectedInvoiceRow.stockItemName}>
-                                                            {selectedInvoiceRow.stockItemName}
-                                                        </Typography>
-                                                        <Typography sx={{ fontSize: "0.67rem", color: "#64748b", mt: 0.2 }}>
-                                                            Group: <strong>{selectedInvoiceRow.stockGroup}</strong>
-                                                        </Typography>
-                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, mt: 0.3, flexWrap: "wrap" }}>
-                                                            <Typography sx={{ fontSize: "0.66rem", color: "#1e3a8a", fontWeight: 600 }}>
-                                                                🏢 {selectedInvoiceRow.godown}
-                                                            </Typography>
-                                                            {selectedInvoiceRow.batch !== "-" && (
-                                                                <Chip size="small" label={`Batch: ${selectedInvoiceRow.batch}`} sx={{ height: 16, fontSize: "0.62rem", fontWeight: 700, bgcolor: "#f1f5f9" }} />
-                                                            )}
-                                                        </Box>
-                                                    </TableCell>
+                                                                    {/* Voucher (Vou No, Ref No, Vou Type) */}
+                                                                    <TableCell align="left">
+                                                                        <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#1e3a8a", lineHeight: 1.2 }} title={String(selectedInvoiceRow.vouNo)}>
+                                                                            {selectedInvoiceRow.vouNo}
+                                                                        </Typography>
+                                                                        {selectedInvoiceRow.refNo && selectedInvoiceRow.refNo !== selectedInvoiceRow.vouNo && (
+                                                                            <Typography sx={{ fontSize: "0.68rem", color: "#475569", mt: 0.2 }} title={selectedInvoiceRow.refNo}>
+                                                                                    Ref: {selectedInvoiceRow.refNo}
+                                                                            </Typography>
+                                                                        )}
+                                                                        <Typography sx={{ fontSize: "0.64rem", color: "#64748b" }}>
+                                                                            {selectedInvoiceRow.vouType}
+                                                                        </Typography>
+                                                                    </TableCell>
 
-                                                    {/* Quantities (Bill Qty, Act Qty, Bal Inward Tonnage) */}
-                                                    <TableCell align="right">
-                                                        <Typography sx={{ fontSize: "0.76rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
-                                                            {selectedInvoiceRow.billQty}
-                                                        </Typography>
-                                                        <Typography sx={{ fontSize: "0.68rem", color: "#475569", mt: 0.2 }}>
-                                                            Act: {selectedInvoiceRow.actQty}
-                                                        </Typography>
-                                                        {selectedInvoiceRow.balInwardTonnage !== "-" && (
-                                                            <Typography sx={{ fontSize: "0.64rem", color: "#b45309", fontWeight: 700 }}>
-                                                                Bal Inw: {selectedInvoiceRow.balInwardTonnage}
-                                                            </Typography>
-                                                        )}
-                                                    </TableCell>
+                                                                    {/* Party Name, Staff Involved, Payment Days */}
+                                                                    <TableCell align="left">
+                                                                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.25 }} title={selectedInvoiceRow.partyName}>
+                                                                            {selectedInvoiceRow.partyName}
+                                                                        </Typography>
+                                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, mt: 0.3, flexWrap: "wrap" }}>
+                                                                            <Typography sx={{ fontSize: "0.66rem", color: "#475569" }}>
+                                                                                Staff: <strong style={{ color: "#0f172a" }}>{selectedInvoiceRow.staffInvolved}</strong>
+                                                                            </Typography>
+                                                                            <Typography sx={{ fontSize: "0.66rem", color: "#475569" }}>
+                                                                                Days: <strong style={{ color: "#0f172a" }}>{selectedInvoiceRow.paymentDays}</strong>
+                                                                            </Typography>
+                                                                        </Box>
+                                                                    </TableCell>
 
-                                                    {/* Rate, Amount & Discount */}
-                                                    <TableCell align="right">
-                                                        <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#0f172a" }}>
-                                                            {selectedInvoiceRow.rate}
-                                                        </Typography>
-                                                        <Typography sx={{ fontSize: "0.68rem", color: "#15803d", fontWeight: 700, mt: 0.2 }}>
-                                                            Amt: {selectedInvoiceRow.amount}
-                                                        </Typography>
-                                                        {selectedInvoiceRow.discount !== "0" && selectedInvoiceRow.discount !== "-" && (
-                                                            <Typography sx={{ fontSize: "0.64rem", color: "#64748b" }}>
-                                                                Disc: {selectedInvoiceRow.discount}
-                                                            </Typography>
-                                                        )}
-                                                    </TableCell>
+                                                                    {/* Stock Item Name, Godown & Batch */}
+                                                                    <TableCell align="left">
+                                                                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, color: "#0f172a", lineHeight: 1.25 }} title={itemStockName}>
+                                                                            {itemStockName}
+                                                                        </Typography>
+                                                                        <Typography sx={{ fontSize: "0.67rem", color: "#64748b", mt: 0.2 }}>
+                                                                            Group: <strong>{itemStockGroup}</strong>
+                                                                        </Typography>
+                                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, mt: 0.3, flexWrap: "wrap" }}>
+                                                                            <Typography sx={{ fontSize: "0.66rem", color: "#1e3a8a", fontWeight: 600 }}>
+                                                                                🏢 {itemGodown}
+                                                                            </Typography>
+                                                                            {selectedInvoiceRow.batch !== "-" && (
+                                                                                <Chip size="small" label={`Batch: ${selectedInvoiceRow.batch}`} sx={{ height: 16, fontSize: "0.62rem", fontWeight: 700, bgcolor: "#f1f5f9" }} />
+                                                                            )}
+                                                                        </Box>
+                                                                    </TableCell>
 
-                                                    {/* Total Amount & Taxes/Expenses */}
-                                                    <TableCell align="right">
-                                                        <Typography sx={{ fontSize: "0.78rem", fontWeight: 900, color: "#15803d", lineHeight: 1.2 }}>
-                                                            {selectedInvoiceRow.totalAmount}
-                                                        </Typography>
-                                                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.4, mt: 0.3, flexWrap: "wrap" }}>
-                                                            <Typography sx={{ fontSize: "0.62rem", color: "#64748b" }}>
-                                                                CGST: {selectedInvoiceRow.cgst} | SGST: {selectedInvoiceRow.sgst} | IGST: {selectedInvoiceRow.igst}
-                                                            </Typography>
-                                                        </Box>
-                                                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.4, flexWrap: "wrap" }}>
-                                                            <Typography sx={{ fontSize: "0.62rem", color: "#64748b" }}>
-                                                                Exp: {selectedInvoiceRow.expenses} | Rnd: {selectedInvoiceRow.roundOff}
-                                                            </Typography>
-                                                        </Box>
-                                                    </TableCell>
-                                                </TableRow>
+                                                                    {/* Quantities (Bill Qty, Act Qty, Bal Inward Tonnage) */}
+                                                                    <TableCell align="right">
+                                                                        <Typography sx={{ fontSize: "0.76rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
+                                                                            {itemBillQty}
+                                                                        </Typography>
+                                                                        <Typography sx={{ fontSize: "0.68rem", color: "#475569", mt: 0.2 }}>
+                                                                            Act: {itemActQty}
+                                                                        </Typography>
+                                                                        {selectedInvoiceRow.balInwardTonnage !== "-" && (
+                                                                            <Typography sx={{ fontSize: "0.64rem", color: "#b45309", fontWeight: 700 }}>
+                                                                                Bal Inw: {selectedInvoiceRow.balInwardTonnage}
+                                                                            </Typography>
+                                                                        )}
+                                                                    </TableCell>
+
+                                                                    {/* Rate, Amount & Discount */}
+                                                                    <TableCell align="right">
+                                                                        <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#0f172a" }}>
+                                                                            {itemRate}
+                                                                        </Typography>
+                                                                        <Typography sx={{ fontSize: "0.68rem", color: "#15803d", fontWeight: 700, mt: 0.2 }}>
+                                                                            Amt: {itemAmt}
+                                                                        </Typography>
+                                                                        {selectedInvoiceRow.discount !== "0" && selectedInvoiceRow.discount !== "-" && (
+                                                                            <Typography sx={{ fontSize: "0.64rem", color: "#64748b" }}>
+                                                                                Disc: {selectedInvoiceRow.discount}
+                                                                            </Typography>
+                                                                        )}
+                                                                    </TableCell>
+
+                                                                    {/* Total Amount & Taxes/Expenses */}
+                                                                    <TableCell align="right">
+                                                                        <Typography sx={{ fontSize: "0.78rem", fontWeight: 900, color: "#15803d", lineHeight: 1.2 }}>
+                                                                            {lIdx === 0 ? selectedInvoiceRow.totalAmount : itemAmt}
+                                                                        </Typography>
+                                                                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.4, mt: 0.3, flexWrap: "wrap" }}>
+                                                                            <Typography sx={{ fontSize: "0.62rem", color: "#64748b" }}>
+                                                                                CGST: {selectedInvoiceRow.cgst} | SGST: {selectedInvoiceRow.sgst}
+                                                                            </Typography>
+                                                                        </Box>
+                                                                        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.4, flexWrap: "wrap" }}>
+                                                                            <Typography sx={{ fontSize: "0.62rem", color: "#64748b" }}>
+                                                                                Exp: {selectedInvoiceRow.expenses} | Rnd: {selectedInvoiceRow.roundOff}
+                                                                            </Typography>
+                                                                        </Box>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            );
+                                                        });
+                                                    }
+
+                                                    return (
+                                                        <TableRow sx={{ bgcolor: "#ffffff" }}>
+                                                            {/* S.no */}
+                                                            <TableCell align="center" sx={{ fontWeight: 700, color: "#475569" }}>
+                                                                {selectedInvoiceRow.sNo}
+                                                            </TableCell>
+
+                                                            {/* Dates (Bill Date & Entry Date) */}
+                                                            <TableCell align="left">
+                                                                <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#0284c7", lineHeight: 1.2 }}>
+                                                                    Bill: {selectedInvoiceRow.billDate}
+                                                                </Typography>
+                                                                <Typography sx={{ fontSize: "0.68rem", color: "#64748b", mt: 0.2 }}>
+                                                                    Entry: {selectedInvoiceRow.entryDate}
+                                                                </Typography>
+                                                            </TableCell>
+
+                                                            {/* Voucher (Vou No, Ref No, Vou Type) */}
+                                                            <TableCell align="left">
+                                                                <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#1e3a8a", lineHeight: 1.2 }} title={String(selectedInvoiceRow.vouNo)}>
+                                                                    {selectedInvoiceRow.vouNo}
+                                                                </Typography>
+                                                                {selectedInvoiceRow.refNo && selectedInvoiceRow.refNo !== selectedInvoiceRow.vouNo && (
+                                                                    <Typography sx={{ fontSize: "0.68rem", color: "#475569", mt: 0.2 }} title={selectedInvoiceRow.refNo}>
+                                                                            Ref: {selectedInvoiceRow.refNo}
+                                                                    </Typography>
+                                                                )}
+                                                                <Typography sx={{ fontSize: "0.64rem", color: "#64748b" }}>
+                                                                    {selectedInvoiceRow.vouType}
+                                                                </Typography>
+                                                            </TableCell>
+
+                                                            {/* Party Name, Staff Involved, Payment Days */}
+                                                            <TableCell align="left">
+                                                                <Typography sx={{ fontSize: "0.75rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.25 }} title={selectedInvoiceRow.partyName}>
+                                                                    {selectedInvoiceRow.partyName}
+                                                                </Typography>
+                                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, mt: 0.3, flexWrap: "wrap" }}>
+                                                                    <Typography sx={{ fontSize: "0.66rem", color: "#475569" }}>
+                                                                        Staff: <strong style={{ color: "#0f172a" }}>{selectedInvoiceRow.staffInvolved}</strong>
+                                                                    </Typography>
+                                                                    <Typography sx={{ fontSize: "0.66rem", color: "#475569" }}>
+                                                                        Days: <strong style={{ color: "#0f172a" }}>{selectedInvoiceRow.paymentDays}</strong>
+                                                                    </Typography>
+                                                                </Box>
+                                                            </TableCell>
+
+                                                            {/* Stock Item Name, Godown & Batch */}
+                                                            <TableCell align="left">
+                                                                <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, color: "#0f172a", lineHeight: 1.25 }} title={selectedInvoiceRow.stockItemName}>
+                                                                    {selectedInvoiceRow.stockItemName}
+                                                                </Typography>
+                                                                <Typography sx={{ fontSize: "0.67rem", color: "#64748b", mt: 0.2 }}>
+                                                                    Group: <strong>{selectedInvoiceRow.stockGroup}</strong>
+                                                                </Typography>
+                                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, mt: 0.3, flexWrap: "wrap" }}>
+                                                                    <Typography sx={{ fontSize: "0.66rem", color: "#1e3a8a", fontWeight: 600 }}>
+                                                                        🏢 {selectedInvoiceRow.godown}
+                                                                    </Typography>
+                                                                    {selectedInvoiceRow.batch !== "-" && (
+                                                                        <Chip size="small" label={`Batch: ${selectedInvoiceRow.batch}`} sx={{ height: 16, fontSize: "0.62rem", fontWeight: 700, bgcolor: "#f1f5f9" }} />
+                                                                    )}
+                                                                </Box>
+                                                            </TableCell>
+
+                                                            {/* Quantities (Bill Qty, Act Qty, Bal Inward Tonnage) */}
+                                                            <TableCell align="right">
+                                                                <Typography sx={{ fontSize: "0.76rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
+                                                                    {selectedInvoiceRow.billQty}
+                                                                </Typography>
+                                                                <Typography sx={{ fontSize: "0.68rem", color: "#475569", mt: 0.2 }}>
+                                                                    Act: {selectedInvoiceRow.actQty}
+                                                                </Typography>
+                                                                {selectedInvoiceRow.balInwardTonnage !== "-" && (
+                                                                    <Typography sx={{ fontSize: "0.64rem", color: "#b45309", fontWeight: 700 }}>
+                                                                        Bal Inw: {selectedInvoiceRow.balInwardTonnage}
+                                                                    </Typography>
+                                                                )}
+                                                            </TableCell>
+
+                                                            {/* Rate, Amount & Discount */}
+                                                            <TableCell align="right">
+                                                                <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#0f172a" }}>
+                                                                    {selectedInvoiceRow.rate}
+                                                                </Typography>
+                                                                <Typography sx={{ fontSize: "0.68rem", color: "#15803d", fontWeight: 700, mt: 0.2 }}>
+                                                                    Amt: {selectedInvoiceRow.amount}
+                                                                </Typography>
+                                                                {selectedInvoiceRow.discount !== "0" && selectedInvoiceRow.discount !== "-" && (
+                                                                    <Typography sx={{ fontSize: "0.64rem", color: "#64748b" }}>
+                                                                        Disc: {selectedInvoiceRow.discount}
+                                                                    </Typography>
+                                                                )}
+                                                            </TableCell>
+
+                                                            {/* Total Amount & Taxes/Expenses */}
+                                                            <TableCell align="right">
+                                                                <Typography sx={{ fontSize: "0.78rem", fontWeight: 900, color: "#15803d", lineHeight: 1.2 }}>
+                                                                    {selectedInvoiceRow.totalAmount}
+                                                                </Typography>
+                                                                <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.4, mt: 0.3, flexWrap: "wrap" }}>
+                                                                    <Typography sx={{ fontSize: "0.62rem", color: "#64748b" }}>
+                                                                        CGST: {selectedInvoiceRow.cgst} | SGST: {selectedInvoiceRow.sgst} | IGST: {selectedInvoiceRow.igst}
+                                                                    </Typography>
+                                                                </Box>
+                                                                <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.4, flexWrap: "wrap" }}>
+                                                                    <Typography sx={{ fontSize: "0.62rem", color: "#64748b" }}>
+                                                                        Exp: {selectedInvoiceRow.expenses} | Rnd: {selectedInvoiceRow.roundOff}
+                                                                    </Typography>
+                                                                </Box>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })()}
 
                                                 {/* NARRATION SUB-ROW (* below the row) */}
                                                 <TableRow sx={{ bgcolor: "#ffffff", borderBottom: "1px solid #e2e8f0" }}>
@@ -2589,12 +3333,439 @@ export const PurchaseTransactionDetailsDialog: React.FC<PurchaseTransactionDetai
 
                                 {/* Right: Staff Involved Table Companion Card */}
                                 <Box sx={{ width: { xs: "100%", md: 320 }, flexShrink: 0 }}>
-                                    {renderStaffInvolvedCard("Staff Involved", getInvoiceStaffList(selectedInvoiceRow))}
+                                    {renderStaffInvolvedCard(
+                                        `Staff Involved${loadingPurchaseInvoice ? " (Loading...)" : ""}`,
+                                        getInvoiceStaffList(selectedInvoiceRow)
+                                    )}
                                 </Box>
                             </Box>
                         </DialogContent>
                     </React.Fragment>
                 )}
+            </Dialog>
+
+            {/* ============================================================== */}
+            {/* POPUP MODAL: PAYMENT / JOURNAL DETAILED VIEW WITH COMPANION   */}
+            {/* ============================================================== */}
+            <Dialog
+                open={Boolean(selectedPaymentRow)}
+                onClose={() => setSelectedPaymentRow(null)}
+                maxWidth="lg"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 2.5,
+                        boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
+                        bgcolor: "#ffffff",
+                        overflow: "hidden",
+                        maxHeight: "90vh",
+                        display: "flex",
+                        flexDirection: "column",
+                    },
+                }}
+            >
+                {selectedPaymentRow && (() => {
+                    const payTransId = String(selectedPaymentRow.Trans_Id || selectedPaymentRow.transId || selectedPaymentRow.pay_id || "").trim();
+                    const isJournal = String(selectedPaymentRow.Particulars || selectedPaymentRow.vouType || "").toUpperCase().includes("JOURNAL");
+
+                    const jLive = isJournal && payTransId ? journalDetailsMap[payTransId] : null;
+                    const pLive = !isJournal && payTransId ? paymentDetailsMap[payTransId] : null;
+
+                    const jHead = jLive?.headerData?.[0];
+                    const pHead = pLive?.headerData?.[0];
+
+                    const modalTitle = isJournal ? "Journal Voucher Details" : "Payment Voucher Details";
+                    const voucherNo = jHead?.JournalVoucherNo || pHead?.payment_invoice_no || selectedPaymentRow.vouNo || "-";
+                    const entryDate = jHead?.JournalDate ? formatDisplayDate(jHead.JournalDate) : (pHead?.payment_date ? formatDisplayDate(pHead.payment_date) : selectedPaymentRow.entryDate);
+                    const party = pHead?.debit_ledger_name || selectedPaymentRow.purPartyName || retailerName || "-";
+                    const voucherType = jHead?.voucher_name || pHead?.voucher_name || selectedPaymentRow.vouType || (isJournal ? "ON_Journal SM" : "ON_Payment SM");
+                    const narration = jHead?.Narration || pHead?.remarks || selectedPaymentRow.narration || "-";
+
+                    return (
+                        <React.Fragment>
+                            <DialogTitle
+                                sx={{
+                                    px: 3,
+                                    py: 1.8,
+                                    bgcolor: "#f8fafc",
+                                    borderBottom: "1px solid #e2e8f0",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                }}
+                            >
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+                                    <Box
+                                        sx={{
+                                            width: 38,
+                                            height: 38,
+                                            borderRadius: 2,
+                                            bgcolor: isJournal ? "#fdf2f8" : "#faf5ff",
+                                            border: `1px solid ${isJournal ? "#fbcfe8" : "#e9d5ff"}`,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            color: isJournal ? "#db2777" : "#7e22ce",
+                                        }}
+                                    >
+                                        <PaymentOutlinedIcon sx={{ fontSize: 22 }} />
+                                    </Box>
+                                    <Box>
+                                        <Typography sx={{ fontSize: "1rem", fontWeight: 800, color: "#1e3a8a", lineHeight: 1.2 }}>
+                                            {modalTitle}
+                                        </Typography>
+                                        <Typography sx={{ fontSize: "0.74rem", color: "#64748b", mt: 0.2 }}>
+                                            Voucher No: <strong style={{ color: "#1e3a8a" }}>{voucherNo}</strong> • Date: <strong>{entryDate}</strong> • Party: <strong>{party}</strong>
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    {displayPayments.length > 1 && (
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, bgcolor: "#ffffff", p: 0.4, borderRadius: 1.5, border: "1px solid #cbd5e1" }}>
+                                            <IconButton
+                                                size="small"
+                                                disabled={displayPayments.findIndex(r => r.sNo === selectedPaymentRow.sNo) <= 0}
+                                                onClick={() => {
+                                                    const curIdx = displayPayments.findIndex(r => r.sNo === selectedPaymentRow.sNo);
+                                                    if (curIdx > 0) setSelectedPaymentRow(displayPayments[curIdx - 1]);
+                                                }}
+                                                sx={{ p: 0.3 }}
+                                                title="Previous Payment Record"
+                                            >
+                                                <ChevronLeftIcon fontSize="small" />
+                                            </IconButton>
+                                            <Typography sx={{ fontSize: "0.74rem", fontWeight: 800, color: "#1e3a8a", px: 0.8 }}>
+                                                {displayPayments.findIndex(r => r.sNo === selectedPaymentRow.sNo) + 1} of {displayPayments.length}
+                                            </Typography>
+                                            <IconButton
+                                                size="small"
+                                                disabled={displayPayments.findIndex(r => r.sNo === selectedPaymentRow.sNo) >= displayPayments.length - 1}
+                                                onClick={() => {
+                                                    const curIdx = displayPayments.findIndex(r => r.sNo === selectedPaymentRow.sNo);
+                                                    if (curIdx < displayPayments.length - 1) setSelectedPaymentRow(displayPayments[curIdx + 1]);
+                                                }}
+                                                sx={{ p: 0.3 }}
+                                                title="Next Payment Record"
+                                            >
+                                                <ChevronRightIcon fontSize="small" />
+                                            </IconButton>
+                                        </Box>
+                                    )}
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setSelectedPaymentRow(null)}
+                                        sx={{
+                                            color: "#64748b",
+                                            "&:hover": { bgcolor: "#fee2e2", color: "#b91c1c" },
+                                        }}
+                                    >
+                                        <CloseIcon fontSize="small" />
+                                    </IconButton>
+                                </Box>
+                            </DialogTitle>
+
+                            <DialogContent sx={{ p: 2.5, bgcolor: "#ffffff", overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+                                <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start", width: "100%", flexDirection: { xs: "column", md: "row" } }}>
+                                    {/* Left: Detailed Views */}
+                                    <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                                        {/* Main Multi-Column Table */}
+                                        <TableContainer
+                                            component={Paper}
+                                            elevation={0}
+                                            sx={{
+                                                border: "1px solid #e2e8f0",
+                                                borderRadius: 1.5,
+                                                overflow: "hidden",
+                                                width: "100%",
+                                            }}
+                                        >
+                                            <Table
+                                                size="small"
+                                                sx={{
+                                                    width: "100%",
+                                                    tableLayout: "fixed",
+                                                    "& .MuiTableCell-root": {
+                                                        py: 0.7,
+                                                        px: 1,
+                                                        fontSize: "0.74rem",
+                                                        borderBottom: "1px solid #f1f5f9",
+                                                        verticalAlign: "top",
+                                                    },
+                                                    "& .MuiTableCell-head": {
+                                                        py: 0.8,
+                                                        px: 1,
+                                                        fontSize: "0.73rem",
+                                                        fontWeight: 800,
+                                                        color: "#1e3a8a",
+                                                        bgcolor: "#f1f5f9",
+                                                        borderBottom: "1px solid #cbd5e1",
+                                                    },
+                                                }}
+                                            >
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell align="center" sx={{ width: "5%" }}>S.no</TableCell>
+                                                        <TableCell align="left" sx={{ width: "14%" }}>Voucher & Date</TableCell>
+                                                        <TableCell align="left" sx={{ width: "24%" }}>{isJournal ? "Account Particulars" : "Credit / Debit Ledgers"}</TableCell>
+                                                        <TableCell align="center" sx={{ width: "8%" }}>Type</TableCell>
+                                                        <TableCell align="right" sx={{ width: "16%" }}>Amount</TableCell>
+                                                        <TableCell align="left" sx={{ width: "33%" }}>Reference Details</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {isJournal && jLive?.lineData && jLive.lineData.length > 0 ? (
+                                                        jLive.lineData.map((lItem, lIdx) => {
+                                                            const refMatch = jLive.referenceData?.find(r => r.LineId === lItem.LineId) || jLive.referenceData?.[0];
+                                                            return (
+                                                                <TableRow key={lIdx} sx={{ bgcolor: lIdx % 2 === 1 ? "#fafbfc" : "#ffffff" }}>
+                                                                    <TableCell align="center" sx={{ fontWeight: 700, color: "#475569" }}>
+                                                                        {lItem.LineNum || (lIdx + 1)}
+                                                                    </TableCell>
+                                                                    <TableCell align="left">
+                                                                        <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#1e3a8a", lineHeight: 1.2 }}>
+                                                                            {voucherNo}
+                                                                        </Typography>
+                                                                        <Typography sx={{ fontSize: "0.68rem", color: "#64748b", mt: 0.2 }}>
+                                                                            {entryDate}
+                                                                        </Typography>
+                                                                    </TableCell>
+                                                                    <TableCell align="left">
+                                                                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 800, color: "#0f172a" }}>
+                                                                            {lItem.AccountGet || "-"}
+                                                                        </Typography>
+                                                                        <Typography sx={{ fontSize: "0.66rem", color: "#64748b" }}>
+                                                                            Acc ID: {lItem.Acc_Id}
+                                                                        </Typography>
+                                                                    </TableCell>
+                                                                    <TableCell align="center">
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label={lItem.DrCr || "Dr"}
+                                                                            sx={{
+                                                                                height: 18,
+                                                                                fontSize: "0.66rem",
+                                                                                fontWeight: 800,
+                                                                                bgcolor: lItem.DrCr === "Cr" ? "#fef3c7" : "#eff6ff",
+                                                                                color: lItem.DrCr === "Cr" ? "#b45309" : "#1d4ed8",
+                                                                            }}
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell align="right">
+                                                                        <Typography sx={{ fontSize: "0.78rem", fontWeight: 800, color: lItem.DrCr === "Dr" ? "#15803d" : "#0f172a" }}>
+                                                                            {formatCurrency(lItem.Amount || 0)}
+                                                                        </Typography>
+                                                                    </TableCell>
+                                                                    <TableCell align="left">
+                                                                        {refMatch ? (
+                                                                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.2 }}>
+                                                                                <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: "#1e3a8a" }}>
+                                                                                    Ref: {refMatch.RefNo || "-"} ({refMatch.RefType || "PURCHASE"})
+                                                                                </Typography>
+                                                                                <Typography sx={{ fontSize: "0.66rem", color: "#64748b" }}>
+                                                                                    Bill Ref: {refMatch.BillRefNo || "-"} • Amt: {formatCurrency(refMatch.Amount || 0)}
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        ) : (
+                                                                            <Typography sx={{ fontSize: "0.70rem", color: "#94a3b8" }}>-</Typography>
+                                                                        )}
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            );
+                                                        })
+                                                    ) : !isJournal && pLive?.referenceData && pLive.referenceData.length > 0 ? (
+                                                        pLive.referenceData.map((refItem, rIdx) => (
+                                                            <TableRow key={rIdx} sx={{ bgcolor: rIdx % 2 === 1 ? "#fafbfc" : "#ffffff" }}>
+                                                                <TableCell align="center" sx={{ fontWeight: 700, color: "#475569" }}>
+                                                                    {rIdx + 1}
+                                                                </TableCell>
+                                                                <TableCell align="left">
+                                                                    <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#1e3a8a", lineHeight: 1.2 }}>
+                                                                        {voucherNo}
+                                                                    </Typography>
+                                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", mt: 0.2 }}>
+                                                                        {entryDate}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                                <TableCell align="left">
+                                                                    <Typography sx={{ fontSize: "0.75rem", fontWeight: 800, color: "#0f172a" }}>
+                                                                        {refItem.Account_name || party}
+                                                                    </Typography>
+                                                                    {pHead?.credit_ledger_name && (
+                                                                        <Typography sx={{ fontSize: "0.66rem", color: "#64748b" }}>
+                                                                            Credit: {pHead.credit_ledger_name}
+                                                                        </Typography>
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell align="center">
+                                                                    <Chip
+                                                                        size="small"
+                                                                        label="PAYMENT"
+                                                                        sx={{
+                                                                            height: 18,
+                                                                            fontSize: "0.66rem",
+                                                                            fontWeight: 800,
+                                                                            bgcolor: "#faf5ff",
+                                                                            color: "#7e22ce",
+                                                                        }}
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Typography sx={{ fontSize: "0.78rem", fontWeight: 800, color: "#15803d" }}>
+                                                                        {formatCurrency(refItem.Debit_Amo || pHead?.debit_amount || selectedPaymentRow.paidAmt || 0)}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                                <TableCell align="left">
+                                                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.2 }}>
+                                                                        <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: "#1e3a8a" }}>
+                                                                            Bill: {refItem.bill_name || "-"} (Ref: {refItem.bill_ref_number || "-"})
+                                                                        </Typography>
+                                                                        <Typography sx={{ fontSize: "0.66rem", color: "#64748b" }}>
+                                                                            Type: {refItem.JournalBillType || "PURCHASE PAYMENT"} • Total: {formatCurrency(refItem.bill_amount || 0)}
+                                                                        </Typography>
+                                                                    </Box>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))
+                                                    ) : (
+                                                        <TableRow sx={{ bgcolor: "#ffffff" }}>
+                                                            <TableCell align="center" sx={{ fontWeight: 700, color: "#475569" }}>1</TableCell>
+                                                            <TableCell align="left">
+                                                                <Typography sx={{ fontSize: "0.74rem", fontWeight: 700, color: "#1e3a8a" }}>{voucherNo}</Typography>
+                                                                <Typography sx={{ fontSize: "0.68rem", color: "#64748b" }}>{entryDate}</Typography>
+                                                            </TableCell>
+                                                            <TableCell align="left">
+                                                                <Typography sx={{ fontSize: "0.75rem", fontWeight: 800, color: "#0f172a" }}>{party}</Typography>
+                                                                <Typography sx={{ fontSize: "0.66rem", color: "#64748b" }}>{voucherType}</Typography>
+                                                            </TableCell>
+                                                            <TableCell align="center">
+                                                                <Chip size="small" label={isJournal ? "JOURNAL" : "PAYMENT"} sx={{ height: 18, fontSize: "0.66rem", fontWeight: 800, bgcolor: "#eff6ff", color: "#1d4ed8" }} />
+                                                            </TableCell>
+                                                            <TableCell align="right">
+                                                                <Typography sx={{ fontSize: "0.78rem", fontWeight: 800, color: "#15803d" }}>{selectedPaymentRow.paidAmt}</Typography>
+                                                            </TableCell>
+                                                            <TableCell align="left">
+                                                                <Typography sx={{ fontSize: "0.72rem", color: "#475569" }}>Settlement against Purchase</Typography>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )}
+
+                                                    {/* NARRATION SUB-ROW */}
+                                                    <TableRow sx={{ bgcolor: "#ffffff", borderBottom: "1px solid #e2e8f0" }}>
+                                                        <TableCell colSpan={6} sx={{ py: 0.4, px: 2, borderTop: "none" }}>
+                                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+                                                                <Typography sx={{ color: "#2563eb", fontWeight: 900, fontSize: "0.85rem", lineHeight: 1 }}>*</Typography>
+                                                                <Typography sx={{ fontSize: "0.73rem", color: "#475569", fontStyle: "italic" }}>
+                                                                    <strong style={{ fontStyle: "normal", color: "#1e3a8a" }}>Narration:</strong> {narration}
+                                                                </Typography>
+                                                            </Box>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+
+                                        {/* Structured Key-Value Details Cards Grid */}
+                                        <Paper elevation={0} sx={{ p: 1.5, border: "1px solid #e2e8f0", borderRadius: 1.5, bgcolor: "#f8fafc" }}>
+                                            <Typography sx={{ fontSize: "0.74rem", fontWeight: 800, color: "#1e3a8a", textTransform: "uppercase", letterSpacing: "0.04em", mb: 1 }}>
+                                                {isJournal ? "Journal Attributes" : "Payment Attributes"}
+                                            </Typography>
+                                            <Grid container spacing={1.5}>
+                                                <Grid item xs={12} sm={6} md={3}>
+                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Voucher No</Typography>
+                                                    <Typography sx={{ fontSize: "0.78rem", color: "#1e3a8a", fontWeight: 700 }}>{voucherNo}</Typography>
+                                                </Grid>
+                                                <Grid item xs={12} sm={6} md={3}>
+                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Voucher Date</Typography>
+                                                    <Typography sx={{ fontSize: "0.78rem", color: "#0284c7", fontWeight: 700 }}>{entryDate}</Typography>
+                                                </Grid>
+                                                <Grid item xs={12} sm={6} md={3}>
+                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Voucher Type</Typography>
+                                                    <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{voucherType}</Typography>
+                                                </Grid>
+                                                <Grid item xs={12} sm={6} md={3}>
+                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Particulars</Typography>
+                                                    <Typography sx={{ fontSize: "0.78rem", color: "#7e22ce", fontWeight: 700 }}>{selectedPaymentRow.Particulars || (isJournal ? "JOURNAL" : "PAYMENT")}</Typography>
+                                                </Grid>
+
+                                                <Grid item xs={12} sm={6} md={3}>
+                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Debit Party / Account</Typography>
+                                                    <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{party}</Typography>
+                                                </Grid>
+                                                <Grid item xs={12} sm={6} md={3}>
+                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Credit Ledger / Account</Typography>
+                                                    <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{pHead?.credit_ledger_name || (isJournal ? "Multiple Creditors (See lines)" : "-")}</Typography>
+                                                </Grid>
+                                                <Grid item xs={12} sm={6} md={3}>
+                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Transaction Amount</Typography>
+                                                    <Typography sx={{ fontSize: "0.82rem", color: "#15803d", fontWeight: 900 }}>
+                                                        {selectedPaymentRow.paidAmt}
+                                                    </Typography>
+                                                </Grid>
+                                                <Grid item xs={12} sm={6} md={3}>
+                                                    <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Created By</Typography>
+                                                    <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{jHead?.Created_By || pHead?.Created_By || "ADMIN"}</Typography>
+                                                </Grid>
+
+                                                {/* If Journal, show extra Reference dataset information */}
+                                                {isJournal && jLive?.referenceData && jLive.referenceData.length > 0 && (
+                                                    <React.Fragment>
+                                                        <Grid item xs={12} sm={6} md={3}>
+                                                            <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Reference Purchase No</Typography>
+                                                            <Typography sx={{ fontSize: "0.78rem", color: "#1e3a8a", fontWeight: 700 }}>{jLive.referenceData[0]?.RefNo || "-"}</Typography>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6} md={3}>
+                                                            <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Bill Reference No</Typography>
+                                                            <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{jLive.referenceData[0]?.BillRefNo || "-"}</Typography>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6} md={3}>
+                                                            <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Reference Type</Typography>
+                                                            <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{jLive.referenceData[0]?.RefType || "PURCHASE"}</Typography>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6} md={3}>
+                                                            <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Reference Amount</Typography>
+                                                            <Typography sx={{ fontSize: "0.78rem", color: "#15803d", fontWeight: 800 }}>{formatCurrency(jLive.referenceData[0]?.Amount || 0)}</Typography>
+                                                        </Grid>
+                                                    </React.Fragment>
+                                                )}
+
+                                                {/* If Payment, show reference bill info */}
+                                                {!isJournal && pLive?.referenceData && pLive.referenceData.length > 0 && (
+                                                    <React.Fragment>
+                                                        <Grid item xs={12} sm={6} md={3}>
+                                                            <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Against Bill Name</Typography>
+                                                            <Typography sx={{ fontSize: "0.78rem", color: "#1e3a8a", fontWeight: 700 }}>{pLive.referenceData[0]?.bill_name || "-"}</Typography>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6} md={3}>
+                                                            <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Bill Ref No</Typography>
+                                                            <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{pLive.referenceData[0]?.bill_ref_number || "-"}</Typography>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6} md={3}>
+                                                            <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Total Bill Amount</Typography>
+                                                            <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{formatCurrency(pLive.referenceData[0]?.bill_amount || 0)}</Typography>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6} md={3}>
+                                                            <Typography sx={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Payment Mode</Typography>
+                                                            <Typography sx={{ fontSize: "0.78rem", color: "#0f172a", fontWeight: 700 }}>{pHead?.transaction_type || "e-Fund Transfer"}</Typography>
+                                                        </Grid>
+                                                    </React.Fragment>
+                                                )}
+                                            </Grid>
+                                        </Paper>
+                                    </Box>
+
+                                    {/* Right: Staff Involved Table Companion Card */}
+                                    <Box sx={{ width: { xs: "100%", md: 320 }, flexShrink: 0 }}>
+                                        {renderStaffInvolvedCard(
+                                            `Staff Involved${loadingPaymentOrJournal ? " (Loading...)" : ""}`,
+                                            getPaymentStaffList(selectedPaymentRow)
+                                        )}
+                                    </Box>
+                                </Box>
+                            </DialogContent>
+                        </React.Fragment>
+                    );
+                })()}
             </Dialog>
 
         </Dialog>

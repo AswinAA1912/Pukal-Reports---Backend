@@ -99,6 +99,10 @@ export interface PurchaseDeliveryItem {
   allInwardJous?: string[];
   allPurInvNos?: string[];
   allPaymentNos?: string[];
+  tripId?: string | number;
+  allTripIds?: (string | number)[];
+  allTransIds?: (string | number)[];
+  OrderId?: string | number;
 
   poItems?: any[];
   inwardDetails?: any[];
