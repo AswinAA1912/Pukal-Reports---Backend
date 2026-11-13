@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import stockAndPurchase from '../controller/Reports/stockAndPurchase.mjs';
 import storageStockReport from '../controller/Reports/storageStockReport.mjs';
 import expences from '../controller/Masters/expences.mjs';
@@ -38,6 +38,8 @@ import {
     ReportingOnlinePurchasePaymentList,
     ReportingOnlinePaymentList,
     ReportingOnlineJournalList,
+    BatchStockReport,
+    BatchStockReportGodownwise,
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -127,6 +129,8 @@ ReportRouter.get('/externalAPI/reportingOnlinePurchaseList', ReportingOnlinePurc
 ReportRouter.get('/externalAPI/reportingOnlinePurchasePaymentList', ReportingOnlinePurchasePaymentList);
 ReportRouter.get('/externalAPI/reportingOnlinePaymentList', ReportingOnlinePaymentList);
 ReportRouter.get('/externalAPI/reportingOnlineJournalList', ReportingOnlineJournalList);
+ReportRouter.get('/externalAPI/batchStockReport', BatchStockReport);
+ReportRouter.get('/externalAPI/batchStockReportGodown', BatchStockReportGodownwise);
 
 
 // settings reports

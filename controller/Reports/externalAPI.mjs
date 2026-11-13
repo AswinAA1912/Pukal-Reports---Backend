@@ -1,6 +1,7 @@
 import sql from "mssql";
 import { servError, noData, dataFound, invalidInput } from "../../res.mjs";
 import { ISOString } from "../../helper_functions.mjs";
+import { iso } from "zod";
 
 export const onlineSalesReport = async (req, res) => {
     try {
@@ -1899,3 +1900,48 @@ export const ReportingOnlineJournalList = async (req, res) => {
         servError(error, res);
     }
 };
+
+export const BatchStockReport = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .query(`EXEC Batch_Rpt_Stock_Process @Fromdate, @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
+export const BatchStockReportGodownwise = async (req, res) => {
+    try {
+        const { Fromdate, Todate } = req.query;
+
+        const fromDate = Fromdate ? ISOString(Fromdate) : ISOString();
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+        const godown_id = req.query.GodownId || req.query.Godown_Id || req.query.godownId || req.query.godown_Id || null;
+
+        const result = await new sql.Request()
+            .input("Fromdate", fromDate)
+            .input("Todate", toDate)
+            .input("Godown_Id", godown_id)
+            .query('EXEC Godown_Stock_Batch_IN_OUT_Process @Fromdate, @Todate, @Godown_Id');
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+};
+
