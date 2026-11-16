@@ -40,6 +40,7 @@ import {
     ReportingOnlineJournalList,
     BatchStockReport,
     BatchStockReportGodownwise,
+    RecievablePayableMgtReport,
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
 import {
@@ -131,6 +132,7 @@ ReportRouter.get('/externalAPI/reportingOnlinePaymentList', ReportingOnlinePayme
 ReportRouter.get('/externalAPI/reportingOnlineJournalList', ReportingOnlineJournalList);
 ReportRouter.get('/externalAPI/batchStockReport', BatchStockReport);
 ReportRouter.get('/externalAPI/batchStockReportGodown', BatchStockReportGodownwise);
+ReportRouter.get('/externalAPI/recievablepayablemgt', RecievablePayableMgtReport);
 
 
 // settings reports

@@ -1945,3 +1945,22 @@ export const BatchStockReportGodownwise = async (req, res) => {
     }
 };
 
+export const RecievablePayableMgtReport = async (req, res) => {
+    try {
+        const { Todate } = req.query;
+
+        const toDate = Todate ? ISOString(Todate) : ISOString();
+
+        const result = await new sql.Request()
+            .input("Todate", toDate)
+            .query(`EXEC Reporting_Account_Transactions_ALL_Reci_Pay_VW @Todate`);
+
+        const recordset = result.recordset ?? [];
+        if (!recordset.length) return noData(res);
+
+        dataFound(res, recordset);
+    } catch (error) {
+        servError(error, res);
+    }
+}
+
