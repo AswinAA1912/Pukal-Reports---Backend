@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import stockAndPurchase from '../controller/Reports/stockAndPurchase.mjs';
 import storageStockReport from '../controller/Reports/storageStockReport.mjs';
 import expences from '../controller/Masters/expences.mjs';
@@ -43,6 +43,7 @@ import {
     RecievablePayableMgtReport,
 } from '../controller/Reports/externalAPI.mjs';
 import receiptReport from '../controller/Reports/receiptReport.mjs';
+import { lrReportUploadgetMobile } from '../controller/Reports/shetSheetReport.mjs';
 import {
     MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport, updateEmployeeReportGroup, createEmployeeReportGroup,
     getEmployeeReportGroups, createSalesStockGodown, getSalesStockGodown, updateSalesStockGodown
@@ -65,6 +66,9 @@ ReportRouter.get('/godownexpenseReport', expences.godownTransactionExpandable);
 ReportRouter.get('/godownitemOutexpandable', expences.godownTransactionoutExpandable);
 ReportRouter.get('/godownitemInexpandable', expences.godownTransactioninExpandable);
 ReportRouter.get('/godownitemprocess', expences.godownTransactionprocessExpandable);
+
+// shetSheet reports
+ReportRouter.get('/shetSheetReport', lrReportUploadgetMobile);
 
 // external APIs
 ReportRouter.get('/externalAPI/onlineSalesReport', onlineSalesReport);
