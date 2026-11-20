@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import stockAndPurchase from '../controller/Reports/stockAndPurchase.mjs';
 import storageStockReport from '../controller/Reports/storageStockReport.mjs';
 import expences from '../controller/Masters/expences.mjs';
@@ -48,6 +48,7 @@ import {
     MenuSettings, executeSP, saveReportSettings, getReportList, getReportEditData, updateReportSettings, getReportsByParent, executeReportByTemplate, deleteReport, updateEmployeeReportGroup, createEmployeeReportGroup,
     getEmployeeReportGroups, createSalesStockGodown, getSalesStockGodown, updateSalesStockGodown
 } from '../controller/Reports/reportsettings.mjs';
+import { getStockDifferenceReport } from '../controller/Reports/stockDifferenceReport.mjs';
 
 const ReportRouter = express.Router();
 
@@ -69,6 +70,9 @@ ReportRouter.get('/godownitemprocess', expences.godownTransactionprocessExpandab
 
 // shetSheet reports
 ReportRouter.get('/shetSheetReport', lrReportUploadgetMobile);
+
+//stockDifference reports
+ReportRouter.get('/stockDifference/report', getStockDifferenceReport);
 
 // external APIs
 ReportRouter.get('/externalAPI/onlineSalesReport', onlineSalesReport);
